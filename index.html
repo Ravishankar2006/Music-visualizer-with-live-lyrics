@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🎵 Enhanced Music Visualizer</title>
+
+  <!-- External CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="main-container">
+    <!-- Content Area -->
+    <div class="content-area">
+      <!-- Header -->
+      <div class="text-center mb-8" id="header-section">
+        <p class="text-gray-300 text-lg">Upload your music and lyrics for an immersive audio-visual experience</p>
+      </div>
+
+      <!-- Upload Area -->
+      <div class="max-w-4xl mx-auto mb-8" id="upload-section">
+        <div id="upload-area" class="upload-zone glass-morphism p-8 text-center">
+          <div class="mb-6">
+            <div class="text-6xl mb-4 animate-bounce">🎧</div>
+            <h3 class="text-xl font-semibold mb-2">Upload Your Files</h3>
+
+            <div class="file-input-group flex flex-wrap gap-4 justify-center items-center">
+              <label for="audio-input" class="file-input-label" id="audio-label">
+                🎵 Choose Audio File
+              </label>
+              <label for="lyrics-input" class="file-input-label" id="lyrics-label">
+                📝 Choose Lyrics (.lrc/.txt)
+              </label>
+            </div>
+
+            <input type="file" id="audio-input" accept="audio/*" class="hidden">
+            <input type="file" id="lyrics-input" accept=".lrc,.txt" class="hidden">
+          </div>
+        </div>
+      </div>
+
+      <!-- Hidden Audio Element -->
+      <audio id="audio" style="display: none;">
+        Your browser does not support the audio element.
+      </audio>
+
+           <!-- Cover Art Background -->
+      <div class="cover-art-background" id="cover-art-background">
+        <div class="cover-art-container" id="cover-art-container">
+          <!-- Song Title Above Cover Art -->
+          <div class="song-title-subtle" id="song-title-subtle">No track loaded</div>
+         <div class="cover-art-image" id="cover-art-image"></div>
+       </div>
+     </div>
+
+
+      <!-- Track Info -->
+      <div class="max-w-4xl mx-auto mb-6" id="track-info-section">
+        <div class="glass-morphism p-6 text-center">
+          <div id="track-info">
+            <h3 id="track-name" class="text-xl font-semibold mb-2">No track loaded</h3>
+            <p id="track-duration" class="text-gray-400">--:-- / --:--</p>
+            <p id="lyrics-status" class="text-sm text-gray-500 mt-2">No lyrics file loaded</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Visualizer Section -->
+    <div class="visualizer-section">
+      <canvas id="visualizer"></canvas>
+
+      <!-- Lyrics Overlay -->
+      <div class="lyrics-overlay">
+        <div id="lyrics-display">
+          <div class="no-lyrics">
+            🎤 Upload a lyrics file
+          </div>
+        </div>
+      </div>
+
+      <!-- Enhanced Controls Overlay -->
+      <div class="controls-overlay" id="controls-overlay">
+        <div class="controls-content">
+          <button id="mini-play-pause" class="mini-control-btn primary">▶️</button>
+          <button id="mini-stop" class="mini-control-btn">⏹️</button>
+
+          <div class="progress-container">
+            <div class="time-display" id="current-time">0:00</div>
+            <div class="enhanced-progress-bar" id="enhanced-progress-bar">
+              <div class="enhanced-progress-fill" id="enhanced-progress-fill"></div>
+            </div>
+            <div class="time-display" id="total-time">0:00</div>
+          </div>
+
+          <div class="volume-control">
+            <span style="font-size: 0.8rem;">🔊</span>
+            <input type="range" id="mini-volume" min="0" max="100" value="50" class="volume-slider">
+          </div>
+
+          <button id="mini-shuffle-colors" class="mini-control-btn" title="Click: Change visualizer colors | Double-click: Change lyrics colors">🎨</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>
