@@ -3,112 +3,133 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🎵 Enhanced Music Visualizer</title>
+  <title>Music Visualizer</title>
+  <meta name="description" content="An immersive music visualizer. Upload audio and watch your music come alive.">
 
-  <!-- External CSS -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-
-  <!-- Custom CSS -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="main-container">
-    <!-- Content Area -->
-    <div class="content-area">
-      <!-- Header -->
-      <div class="text-center mb-8" id="header-section">
-        <p class="text-gray-300 text-lg">Upload your music and lyrics for an immersive audio-visual experience</p>
-      </div>
 
-      <!-- Upload Area -->
-      <div class="max-w-4xl mx-auto mb-8" id="upload-section">
-        <div id="upload-area" class="upload-zone glass-morphism p-8 text-center">
-          <div class="mb-6">
-            <div class="text-6xl mb-4 animate-bounce">🎧</div>
-            <h3 class="text-xl font-semibold mb-2">Upload Your Files</h3>
+    <!-- Ambient cover-art blurred background -->
+    <div class="cover-art-background" id="cover-art-background"></div>
 
-            <div class="file-input-group flex flex-wrap gap-4 justify-center items-center">
-              <label for="audio-input" class="file-input-label" id="audio-label">
-                🎵 Choose Audio File
-              </label>
-              <label for="lyrics-input" class="file-input-label" id="lyrics-label">
-                📝 Choose Lyrics (.lrc/.txt)
-              </label>
-            </div>
-
-            <input type="file" id="audio-input" accept="audio/*" class="hidden">
-            <input type="file" id="lyrics-input" accept=".lrc,.txt" class="hidden">
-          </div>
+    <!-- ═══ UPLOAD SCREEN ═══ -->
+    <div class="upload-screen" id="upload-screen">
+      <div class="upload-card" id="upload-area">
+        <div class="upload-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/>
+          </svg>
         </div>
-      </div>
+        <h1 class="upload-card-title">Music Visualizer</h1>
+        <p class="upload-card-sub">Drop an audio file or click to browse</p>
 
-      <!-- Hidden Audio Element -->
-      <audio id="audio" style="display: none;">
-        Your browser does not support the audio element.
-      </audio>
+        <label for="audio-input" class="upload-btn" id="upload-btn-label">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          Choose File
+        </label>
 
-           <!-- Cover Art Background -->
-      <div class="cover-art-background" id="cover-art-background">
-        <div class="cover-art-container" id="cover-art-container">
-          <!-- Song Title Above Cover Art -->
-          <div class="song-title-subtle" id="song-title-subtle">No track loaded</div>
-         <div class="cover-art-image" id="cover-art-image"></div>
-       </div>
-     </div>
-
-
-      <!-- Track Info -->
-      <div class="max-w-4xl mx-auto mb-6" id="track-info-section">
-        <div class="glass-morphism p-6 text-center">
-          <div id="track-info">
-            <h3 id="track-name" class="text-xl font-semibold mb-2">No track loaded</h3>
-            <p id="track-duration" class="text-gray-400">--:-- / --:--</p>
-            <p id="lyrics-status" class="text-sm text-gray-500 mt-2">No lyrics file loaded</p>
-          </div>
-        </div>
+        <input type="file" id="audio-input" accept="audio/*" class="sr-only" multiple>
+        <p class="upload-formats">MP3 · FLAC · WAV · OGG · M4A</p>
       </div>
     </div>
 
-    <!-- Visualizer Section -->
-    <div class="visualizer-section">
-      <canvas id="visualizer"></canvas>
+    <!-- ═══ PLAYER SCREEN ═══ -->
+    <div class="player-screen" id="player-screen">
 
-      <!-- Lyrics Overlay -->
-      <div class="lyrics-overlay">
-        <div id="lyrics-display">
-          <div class="no-lyrics">
-            🎤 Upload a lyrics file
-          </div>
+      <!-- Top-right: fullscreen button -->
+      <button class="fs-btn" id="fullscreen-btn" title="Fullscreen (F)" aria-label="Toggle fullscreen">
+        <svg id="fs-icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+        </svg>
+        <svg id="fs-icon-compress" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4m0 5H4m5 0L3 3m12 6h5m-5 0V4m0 5l6-6M9 15v5m0-5H4m5 0l-6 6m12-6h5m-5 0v5m0-5l6 6"/>
+        </svg>
+      </button>
+
+      <!-- Cover art + track metadata centred above visualizer -->
+      <div class="now-playing" id="now-playing">
+        <div class="cover-art" id="cover-art-image"></div>
+        <div class="track-meta">
+          <p class="track-name"  id="track-name">—</p>
+          <p class="track-artist" id="track-artist"></p>
+          <p class="track-duration" id="track-duration">0:00 / 0:00</p>
         </div>
       </div>
 
-      <!-- Enhanced Controls Overlay -->
-      <div class="controls-overlay" id="controls-overlay">
-        <div class="controls-content">
-          <button id="mini-play-pause" class="mini-control-btn primary">▶️</button>
-          <button id="mini-stop" class="mini-control-btn">⏹️</button>
-
-          <div class="progress-container">
-            <div class="time-display" id="current-time">0:00</div>
-            <div class="enhanced-progress-bar" id="enhanced-progress-bar">
-              <div class="enhanced-progress-fill" id="enhanced-progress-fill"></div>
-            </div>
-            <div class="time-display" id="total-time">0:00</div>
-          </div>
-
-          <div class="volume-control">
-            <span style="font-size: 0.8rem;">🔊</span>
-            <input type="range" id="mini-volume" min="0" max="100" value="50" class="volume-slider">
-          </div>
-
-          <button id="mini-shuffle-colors" class="mini-control-btn" title="Click: Change visualizer colors | Double-click: Change lyrics colors">🎨</button>
-        </div>
+      <!-- Visualizer canvas -->
+      <div class="visualizer-section">
+        <canvas id="visualizer"></canvas>
       </div>
-    </div>
+
+      <!-- Controls pill -->
+      <div class="controls-pill" id="controls-overlay">
+
+        <!-- Prev -->
+        <button id="btn-prev" class="ctrl-btn" aria-label="Previous track">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+
+        <!-- Play / Pause -->
+        <button id="mini-play-pause" class="ctrl-btn ctrl-btn--primary" aria-label="Play / Pause">
+          <svg id="icon-play"  viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+
+        <!-- Next -->
+        <button id="btn-next" class="ctrl-btn" aria-label="Next track">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/></svg>
+        </button>
+
+        <!-- Stop -->
+        <button id="mini-stop" class="ctrl-btn" aria-label="Stop">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
+        </button>
+
+        <div class="ctrl-divider"></div>
+
+        <!-- Seek -->
+        <div class="seek-group">
+          <span class="time-lbl" id="current-time">0:00</span>
+          <div class="seek-track" id="enhanced-progress-bar">
+            <div class="seek-fill" id="enhanced-progress-fill"></div>
+          </div>
+          <span class="time-lbl" id="total-time">0:00</span>
+        </div>
+
+        <div class="ctrl-divider"></div>
+
+        <!-- Volume (icon toggles mute) -->
+        <div class="vol-group">
+          <button id="mute-btn" class="ctrl-btn ctrl-btn--icon" aria-label="Mute / Unmute">
+            <svg id="vol-icon-on"  viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+            <svg id="vol-icon-off" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+          </button>
+          <input type="range" id="mini-volume" min="0" max="100" value="50" class="vol-slider" aria-label="Volume">
+        </div>
+
+        <div class="ctrl-divider"></div>
+
+        <!-- Add more tracks -->
+        <label for="audio-input-more" class="ctrl-btn ctrl-add" title="Add more tracks" aria-label="Add tracks">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </label>
+        <input type="file" id="audio-input-more" accept="audio/*" class="sr-only" multiple>
+      </div>
+
+    </div><!-- /player-screen -->
+
+    <audio id="audio" style="display:none"></audio>
   </div>
 
-  <!-- JavaScript -->
-  <script src="script.js"></script>
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <script type="module" src="./js/app.js"></script>
 </body>
 </html>
