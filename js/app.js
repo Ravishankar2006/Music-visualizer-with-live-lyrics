@@ -43,6 +43,10 @@ class App {
             stopBtn:        document.getElementById('mini-stop'),
             prevBtn:        document.getElementById('btn-prev'),
             nextBtn:        document.getElementById('btn-next'),
+            modeBtn:        document.getElementById('btn-mode'),
+            modeIconBars:   document.getElementById('mode-icon-bars'),
+            modeIconWave:   document.getElementById('mode-icon-wave'),
+            modeIconRadial: document.getElementById('mode-icon-radial'),
             muteBtn:        document.getElementById('mute-btn'),
             volIconOn:      document.getElementById('vol-icon-on'),
             volIconOff:     document.getElementById('vol-icon-off'),
@@ -95,6 +99,7 @@ class App {
         this.el.stopBtn.addEventListener('click', () => this._stop());
         this.el.prevBtn.addEventListener('click', () => this._prevTrack());
         this.el.nextBtn.addEventListener('click', () => this._nextTrack());
+        this.el.modeBtn.addEventListener('click', () => this._cycleMode());
 
         // Volume & mute
         this.el.volumeSlider.addEventListener('input', e => {
@@ -140,6 +145,7 @@ class App {
                 case 'KeyF':        this._toggleFullscreen(); break;
                 case 'KeyN':        this._nextTrack(); break;
                 case 'KeyP':        this._prevTrack(); break;
+                case 'KeyV':        this._cycleMode(); break;
             }
         });
 
@@ -191,14 +197,17 @@ class App {
         if (meta.title)  this.el.trackName.textContent   = meta.title;
         if (meta.artist) this.el.trackArtist.textContent  = meta.artist;
 
-        // Cover art
+        // Cover art + colour palette
         if (meta.coverUrl) {
             this.el.coverImg.style.backgroundImage = `url(${meta.coverUrl})`;
             this.el.coverImg.classList.add('has-cover');
             this.el.coverImg.textContent = '';
             this.el.coverBg.style.backgroundImage = `url(${meta.coverUrl})`;
+            // Feature 7: extract palette from cover art and pass to visualizer
+            this.visualizer.setPaletteFromUrl(meta.coverUrl);
         } else {
             this.el.coverBg.style.backgroundImage = 'none';
+            this.visualizer.resetPalette();
         }
         this.el.coverBg.classList.add('visible');
 
@@ -228,6 +237,23 @@ class App {
         const track = this.queue.next();
         if (track) this._loadTrack(track);
         else this._notify('No more tracks in queue');
+    }
+
+    _cycleMode() {
+        const mode = this.visualizer.nextMode();
+
+        // Swap icon
+        this.el.modeIconBars.style.display   = mode === 'bars'   ? '' : 'none';
+        this.el.modeIconWave.style.display   = mode === 'wave'   ? '' : 'none';
+        this.el.modeIconRadial.style.display = mode === 'radial' ? '' : 'none';
+
+        // Visual feedback on button
+        this.el.modeBtn.classList.add('active');
+        clearTimeout(this._modeActiveTimer);
+        this._modeActiveTimer = setTimeout(() => this.el.modeBtn.classList.remove('active'), 600);
+
+        const labels = { bars: 'Bar visualizer', wave: 'Waveform', radial: 'Radial' };
+        this._notify(`${labels[mode]} ✦`);
     }
 
     // ─── Volume & mute ─────────────────────────────────────────

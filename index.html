@@ -92,7 +92,21 @@
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
         </button>
 
-        <div class="ctrl-divider"></div>
+        <!-- Visualizer mode cycle -->
+        <button id="btn-mode" class="ctrl-btn ctrl-btn--mode" aria-label="Switch visualizer mode" title="Cycle visualizer mode (V)">
+          <svg id="mode-icon-bars" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 18h2V6H4v12zm4 0h2V2H8v16zm4 0h2v-8h-2v8zm4 0h2V9h-2v9zm4 0h2v-5h-2v5z"/>
+          </svg>
+          <svg id="mode-icon-wave" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+            <path d="M2 12C3.5 7 5.5 4 7 4s3.5 3 5 8 3.5 8 5 8 3-3 3-8"
+              stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+          </svg>
+          <svg id="mode-icon-radial" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
+          </svg>
+        </button>
 
         <!-- Seek -->
         <div class="seek-group">
