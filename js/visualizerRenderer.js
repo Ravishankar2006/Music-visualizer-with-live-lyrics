@@ -5,9 +5,9 @@ export class VisualizerRenderer {
         this.canvas = canvas;
         this.ctx    = canvas.getContext('2d');
 
-        // Mode: 'bars' | 'wave' | 'radial'
+        // Mode: 'bars' | 'radial'
         this.mode = 'bars';
-        this._modes = ['bars', 'wave', 'radial'];
+        this._modes = ['bars', 'radial'];
 
         // Colour palette (HSL objects) — updated from cover art
         this.palette = ColorExtractor.defaultPalette();
@@ -20,9 +20,6 @@ export class VisualizerRenderer {
         this.beatFlashAlpha = 0;
         this.beatFlashHue   = 220;
 
-        // Waveform smoothing ring-buffer
-        this._waveSmooth  = null;
-
         // Radial rotation (slow spin on idle)
         this._radialAngle = 0;
 
@@ -34,7 +31,9 @@ export class VisualizerRenderer {
 
     resize() {
         this.canvas.width  = window.innerWidth;
-        this.canvas.height = window.innerHeight * 0.45;
+        this.canvas.height = this.mode === 'radial'
+            ? window.innerHeight
+            : window.innerHeight * 0.45;
     }
 
     /** Cycle to the next visualizer mode. Returns the new mode name. */
@@ -43,7 +42,6 @@ export class VisualizerRenderer {
         this.mode = this._modes[(idx + 1) % this._modes.length];
         // Reset per-mode state
         this.peaks = [];
-        this._waveSmooth = null;
         return this.mode;
     }
 
@@ -74,7 +72,6 @@ export class VisualizerRenderer {
 
         switch (this.mode) {
             case 'bars':   this._drawBars(dataArray, bufferLength);   break;
-            case 'wave':   this._drawWave(dataArray, bufferLength);   break;
             case 'radial': this._drawRadial(dataArray, bufferLength); break;
         }
     }
@@ -212,67 +209,7 @@ export class VisualizerRenderer {
     }
 
     // ══════════════════════════════════════════════════════════
-    //   MODE 2 — OSCILLOSCOPE WAVEFORM
-    // ══════════════════════════════════════════════════════════
-
-    _drawWave(dataArray, bufferLength) {
-        const { width, height } = this.canvas;
-        const centerY = height / 2;
-
-        // Use time-domain data (raw waveform)
-        // dataArray is frequency data; we need a time-domain buffer
-        // VisualizerRenderer stores the analyser node via app.js injection (see note below)
-        // For now use the frequency array as a proxy — remap 0–255 → -1…+1
-        const len   = bufferLength;
-        const sliceW = width / len;
-
-        // Exponential smoothing of the waveform
-        if (!this._waveSmooth || this._waveSmooth.length !== len) {
-            this._waveSmooth = new Float32Array(len).fill(0.5);
-        }
-        for (let i = 0; i < len; i++) {
-            const val = dataArray[i] / 255; // 0 → 1
-            this._waveSmooth[i] += (val - this._waveSmooth[i]) * 0.3;
-        }
-
-        // Compute overall loudness for stroke width / glow
-        let energy = 0;
-        for (let i = 0; i < len; i++) energy += this._waveSmooth[i];
-        energy /= len; // 0 → 1
-
-        const { h, s } = ColorExtractor.interpolate(this.palette, 0.5);
-
-        // Glow line
-        this.ctx.shadowColor = `hsla(${h},${s}%,70%,${0.4 + energy * 0.5})`;
-        this.ctx.shadowBlur  = 8 + energy * 18;
-        this.ctx.strokeStyle = `rgba(255,255,255,${0.6 + energy * 0.4})`;
-        this.ctx.lineWidth   = 1.5 + energy * 2;
-        this.ctx.lineJoin    = 'round';
-        this.ctx.lineCap     = 'round';
-
-        this.ctx.beginPath();
-        for (let i = 0; i < len; i++) {
-            const x = i * sliceW;
-            // Centre the wave: 0.5 maps to centerY
-            const y = centerY + (this._waveSmooth[i] - 0.5) * height * 0.75;
-            if (i === 0) this.ctx.moveTo(x, y);
-            else         this.ctx.lineTo(x, y);
-        }
-        this.ctx.stroke();
-        this.ctx.shadowBlur = 0;
-
-        // Subtle filled area under/over the line
-        this.ctx.globalAlpha = 0.06 + energy * 0.06;
-        this.ctx.fillStyle   = `hsl(${h},${s}%,65%)`;
-        this.ctx.lineTo(width, centerY);
-        this.ctx.lineTo(0, centerY);
-        this.ctx.closePath();
-        this.ctx.fill();
-        this.ctx.globalAlpha = 1;
-    }
-
-    // ══════════════════════════════════════════════════════════
-    //   MODE 3 — RADIAL / CIRCULAR
+    //   MODE 2 — RADIAL / CIRCULAR
     // ══════════════════════════════════════════════════════════
 
     _drawRadial(dataArray, bufferLength) {
@@ -280,32 +217,45 @@ export class VisualizerRenderer {
         const cx = width / 2;
         const cy = height / 2;
 
-        const usefulLen  = Math.floor(bufferLength * 0.55);
-        const innerR     = Math.min(width, height) * 0.11;
-        const maxBarLen  = Math.min(width, height) * 0.30;
-        const angleStep  = (Math.PI * 2) / usefulLen;
+        const usefulLen = Math.floor(bufferLength * 0.6);
+        // innerR is just outside the 170px cover art (half = 85px)
+        const innerR    = 108;
+        const maxBarLen = Math.min(width, height) * 0.36;
+        const angleStep = (Math.PI * 2) / usefulLen;
 
-        // Very slow rotation
-        this._radialAngle += 0.0008;
+        // Slightly faster rotation for liveliness
+        this._radialAngle += 0.0015;
 
+        // ── Dark vignette behind cover art so it pops over the ring ──
+        const vigR = innerR - 4;
+        const vig  = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, vigR);
+        vig.addColorStop(0,   'rgba(0,0,0,0.82)');
+        vig.addColorStop(0.75,'rgba(0,0,0,0.60)');
+        vig.addColorStop(1,   'rgba(0,0,0,0)');
+        this.ctx.fillStyle = vig;
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, vigR, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // ── Radial bars ──
         for (let i = 0; i < usefulLen; i++) {
             const raw = dataArray[i] / 255;
-            const len = Math.pow(raw, 1.3) * maxBarLen;
+            const len = Math.pow(raw, 0.85) * maxBarLen;
             if (len < 1) continue;
 
-            const angle  = this._radialAngle + i * angleStep;
-            const x1     = cx + Math.cos(angle) * innerR;
-            const y1     = cy + Math.sin(angle) * innerR;
-            const x2     = cx + Math.cos(angle) * (innerR + len);
-            const y2     = cy + Math.sin(angle) * (innerR + len);
+            const angle = this._radialAngle + i * angleStep - Math.PI / 2;
+            const x1 = cx + Math.cos(angle) * innerR;
+            const y1 = cy + Math.sin(angle) * innerR;
+            const x2 = cx + Math.cos(angle) * (innerR + len);
+            const y2 = cy + Math.sin(angle) * (innerR + len);
 
             const { h, s } = ColorExtractor.interpolate(this.palette, i / usefulLen);
-            const glowHue   = h - raw * 25;
+            const glowHue = (h - raw * 30 + 360) % 360;
 
-            this.ctx.shadowColor = `hsla(${glowHue},${s}%,70%,${0.3 + raw * 0.65})`;
-            this.ctx.shadowBlur  = 4 + raw * 16;
-            this.ctx.strokeStyle = `rgba(255,255,255,${0.4 + raw * 0.6})`;
-            this.ctx.lineWidth   = Math.max(1, 1.5 + raw * 2.5);
+            this.ctx.shadowColor = `hsla(${glowHue},${s}%,70%,${0.35 + raw * 0.65})`;
+            this.ctx.shadowBlur  = 8 + raw * 28;
+            this.ctx.strokeStyle = `rgba(255,255,255,${0.45 + raw * 0.55})`;
+            this.ctx.lineWidth   = Math.max(1.5, 2 + raw * 4);
             this.ctx.lineCap     = 'round';
 
             this.ctx.beginPath();
@@ -314,16 +264,26 @@ export class VisualizerRenderer {
             this.ctx.stroke();
         }
 
-        // Inner circle — pulses with bass
-        const bassRaw = dataArray[0] / 255;
-        const circleR = innerR * (0.85 + bassRaw * 0.2);
+        // ── Bass-pulsing border circle around cover art ──
+        const bassRaw  = dataArray[0] / 255;
+        const midRaw   = dataArray[Math.floor(usefulLen * 0.3)] / 255;
+        const circleR  = innerR * (0.92 + bassRaw * 0.12);
         const { h: h0, s: s0 } = this.palette[0] ?? { h: 220, s: 80 };
+        const { h: h1, s: s1 } = this.palette[1] ?? { h: h0 + 40, s: s0 };
 
-        this.ctx.shadowColor = `hsla(${h0},${s0}%,75%,${0.4 + bassRaw * 0.5})`;
-        this.ctx.shadowBlur  = 10 + bassRaw * 20;
-        this.ctx.strokeStyle = `rgba(255,255,255,${0.35 + bassRaw * 0.5})`;
-        this.ctx.lineWidth   = 1.5;
+        // Outer glow ring (wider, dimmer)
+        this.ctx.shadowColor = `hsla(${h0},${s0}%,75%,${0.6 + bassRaw * 0.4})`;
+        this.ctx.shadowBlur  = 18 + bassRaw * 40;
+        this.ctx.strokeStyle = `hsla(${h1},${s1}%,80%,${0.3 + midRaw * 0.5})`;
+        this.ctx.lineWidth   = 1 + bassRaw * 2;
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, circleR + 8, 0, Math.PI * 2);
+        this.ctx.stroke();
 
+        // Inner tight ring
+        this.ctx.shadowBlur  = 6 + bassRaw * 20;
+        this.ctx.strokeStyle = `rgba(255,255,255,${0.5 + bassRaw * 0.5})`;
+        this.ctx.lineWidth   = 1.5 + bassRaw * 2;
         this.ctx.beginPath();
         this.ctx.arc(cx, cy, circleR, 0, Math.PI * 2);
         this.ctx.stroke();

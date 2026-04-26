@@ -1,9 +1,10 @@
+// imports
 import { AudioProcessor } from './audioProcessor.js';
 import { VisualizerRenderer } from './visualizerRenderer.js';
 import { MetadataParser } from './metadataParser.js';
 import { QueueManager } from './queueManager.js';
 import { formatTime } from './utils.js';
-
+ 
 class App {
     constructor() {
         this.audioEl = document.getElementById('audio');
@@ -45,7 +46,6 @@ class App {
             nextBtn:        document.getElementById('btn-next'),
             modeBtn:        document.getElementById('btn-mode'),
             modeIconBars:   document.getElementById('mode-icon-bars'),
-            modeIconWave:   document.getElementById('mode-icon-wave'),
             modeIconRadial: document.getElementById('mode-icon-radial'),
             muteBtn:        document.getElementById('mute-btn'),
             volIconOn:      document.getElementById('vol-icon-on'),
@@ -60,6 +60,12 @@ class App {
             fsIconExpand:   document.getElementById('fs-icon-expand'),
             fsIconCompress: document.getElementById('fs-icon-compress'),
             toast:          document.getElementById('toast'),
+            // Queue sidebar
+            queueBtn:       document.getElementById('btn-queue'),
+            queuePanel:     document.getElementById('queue-panel'),
+            queueClose:     document.getElementById('queue-close'),
+            queueList:      document.getElementById('queue-list'),
+            queueCount:     document.getElementById('queue-count'),
         };
 
         // Restore saved volume
@@ -68,6 +74,7 @@ class App {
         this.audioEl.volume = vol / 100;
 
         this._cursorTimeout = null;
+        this._queueOpen = false;
     }
 
     // ─── Events ────────────────────────────────────────────────
@@ -100,6 +107,12 @@ class App {
         this.el.prevBtn.addEventListener('click', () => this._prevTrack());
         this.el.nextBtn.addEventListener('click', () => this._nextTrack());
         this.el.modeBtn.addEventListener('click', () => this._cycleMode());
+
+        // Queue sidebar
+        this.el.queueBtn.addEventListener('click', () => this._toggleQueue());
+        this.el.queueClose.addEventListener('click', () => this._closeQueue());
+        // Subscribe to queue changes so the sidebar auto-updates
+        this.queue.onchange = () => this._renderQueue();
 
         // Volume & mute
         this.el.volumeSlider.addEventListener('input', e => {
@@ -146,6 +159,7 @@ class App {
                 case 'KeyN':        this._nextTrack(); break;
                 case 'KeyP':        this._prevTrack(); break;
                 case 'KeyV':        this._cycleMode(); break;
+                case 'KeyQ':        this._toggleQueue(); break;
             }
         });
 
@@ -197,6 +211,11 @@ class App {
         if (meta.title)  this.el.trackName.textContent   = meta.title;
         if (meta.artist) this.el.trackArtist.textContent  = meta.artist;
 
+        // Persist resolved metadata onto the track object for queue display
+        if (meta.title)    track.title    = meta.title;
+        if (meta.artist)   track.artist   = meta.artist;
+        if (meta.coverUrl) track.coverUrl = meta.coverUrl;
+
         // Cover art + colour palette
         if (meta.coverUrl) {
             this.el.coverImg.style.backgroundImage = `url(${meta.coverUrl})`;
@@ -212,6 +231,7 @@ class App {
         this.el.coverBg.classList.add('visible');
 
         this.audioProcessor.play();
+        this._renderQueue();
     }
 
     // ─── Playback ──────────────────────────────────────────────
@@ -244,15 +264,22 @@ class App {
 
         // Swap icon
         this.el.modeIconBars.style.display   = mode === 'bars'   ? '' : 'none';
-        this.el.modeIconWave.style.display   = mode === 'wave'   ? '' : 'none';
         this.el.modeIconRadial.style.display = mode === 'radial' ? '' : 'none';
+
+        // Toggle full-screen canvas layout for radial mode
+        if (mode === 'radial') {
+            this.el.playerScreen.classList.add('radial-mode');
+        } else {
+            this.el.playerScreen.classList.remove('radial-mode');
+        }
+        this.visualizer.resize();
 
         // Visual feedback on button
         this.el.modeBtn.classList.add('active');
         clearTimeout(this._modeActiveTimer);
         this._modeActiveTimer = setTimeout(() => this.el.modeBtn.classList.remove('active'), 600);
 
-        const labels = { bars: 'Bar visualizer', wave: 'Waveform', radial: 'Radial' };
+        const labels = { bars: 'Bar visualizer', radial: 'Radial' };
         this._notify(`${labels[mode]} ✦`);
     }
 
@@ -305,6 +332,125 @@ class App {
         this.el.fsIconCompress.style.display = isFs ? ''     : 'none';
     }
 
+    // ─── Queue sidebar ─────────────────────────────────────────
+
+    _toggleQueue() {
+        this._queueOpen ? this._closeQueue() : this._openQueue();
+    }
+
+    _openQueue() {
+        this._queueOpen = true;
+        this.el.queuePanel.classList.add('open');
+        this.el.queueBtn.classList.add('queue-open');
+        this._renderQueue();
+    }
+
+    _closeQueue() {
+        this._queueOpen = false;
+        this.el.queuePanel.classList.remove('open');
+        this.el.queueBtn.classList.remove('queue-open');
+    }
+
+    /**
+     * Rebuild the queue list DOM from scratch.
+     * Called on every queue mutation via queue.onchange.
+     */
+    _renderQueue() {
+        const tracks = this.queue.tracks;
+        const current = this.queue.currentIndex;
+        const list = this.el.queueList;
+
+        // Update count label
+        const n = tracks.length;
+        this.el.queueCount.textContent = n === 0 ? 'Empty' : `${n} track${n === 1 ? '' : 's'}`;
+
+        // Empty state
+        if (n === 0) {
+            list.innerHTML = `
+                <div class="queue-empty">
+                    <div class="queue-empty-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                        </svg>
+                    </div>
+                    <p class="queue-empty-text">No tracks yet.<br>Add some music to get started.</p>
+                </div>`;
+            return;
+        }
+
+        // Build rows
+        list.innerHTML = '';
+        tracks.forEach((track, i) => {
+            const isActive = i === current;
+            const row = document.createElement('div');
+            row.className = 'queue-track' + (isActive ? ' active' : '');
+            row.dataset.index = i;
+
+            // Thumb: use cover if stored, else emoji
+            const thumbBg = track.coverUrl
+                ? `background-image: url(${track.coverUrl}); background-size: cover; background-position: center;`
+                : '';
+            const thumbContent = track.coverUrl ? '' : '🎵';
+
+            row.innerHTML = `
+                <div class="qt-index-wrap">
+                    <span class="qt-index">${i + 1}</span>
+                    <div class="qt-playing">
+                        <div class="qt-eq-bar"></div>
+                        <div class="qt-eq-bar"></div>
+                        <div class="qt-eq-bar"></div>
+                    </div>
+                </div>
+                <div class="qt-thumb" style="${thumbBg}">${thumbContent}</div>
+                <div class="qt-info">
+                    <div class="qt-name">${this._esc(track.title || track.name)}</div>
+                    <div class="qt-artist">${this._esc(track.artist || '')}</div>
+                </div>
+                <button class="qt-remove" data-index="${i}" aria-label="Remove track">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>`;
+
+            // Click row → jump to track
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('.qt-remove')) return;
+                const track = this.queue.jumpTo(i);
+                if (track) this._loadTrack(track);
+            });
+
+            // Remove button
+            row.querySelector('.qt-remove').addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(e.currentTarget.dataset.index);
+                const wasCurrent = idx === this.queue.currentIndex;
+                this.queue.remove(idx);
+                if (wasCurrent) {
+                    const next = this.queue.getCurrentTrack();
+                    if (next) this._loadTrack(next);
+                    else {
+                        this.audioProcessor.stop();
+                        this.el.playerScreen.classList.remove('visible');
+                        this.el.uploadScreen.classList.remove('hidden');
+                    }
+                }
+            });
+
+            list.appendChild(row);
+        });
+
+        // Scroll active track into view
+        const activeRow = list.querySelector('.queue-track.active');
+        if (activeRow) activeRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    /** HTML-escape helper to prevent XSS from file names */
+    _esc(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
     // ─── Icon helpers ──────────────────────────────────────────
 
     _setPlayIcon(playing) {
@@ -345,29 +491,41 @@ class App {
     }
 
     /**
-     * Feature 1: Beat-reactive cover art pulse.
-     * Reads the low-frequency (bass) energy each frame, smooths it,
-     * and writes --beat-scale to the cover art element so CSS scales it.
+     * Beat-reactive cover art: scale pulse + halo glow.
+     * Both driven by smoothed bass energy every animation frame.
      */
     _updateBeatPulse(data) {
         let bassEnergy = 0;
         if (data) {
             const { dataArray } = data;
-            // First ~10% of bins = bass
             const bassLen = Math.floor(dataArray.length * 0.1);
             let sum = 0;
             for (let i = 0; i < bassLen; i++) sum += dataArray[i];
             bassEnergy = (sum / bassLen) / 255; // 0 → 1
         }
 
-        // Fast attack, slow decay — same feel as the visualizer bars
+        // Fast attack, slow decay
         this._bassSmoothed += bassEnergy > this._bassSmoothed
             ? (bassEnergy - this._bassSmoothed) * 0.35
             : (bassEnergy - this._bassSmoothed) * 0.08;
 
-        // Map smoothed bass 0→1 to scale 1.0→1.045 (subtle but perceptible)
-        const scale = 1 + this._bassSmoothed * 0.045;
+        const b = this._bassSmoothed;
+
+        // ── Scale pulse (subtle) ──
+        const scale = 1 + b * 0.045;
         this.el.coverImg.style.setProperty('--beat-scale', scale.toFixed(4));
+
+        // ── Reactive glow halo ──
+        const palette = this.visualizer.palette;
+        const { h, s } = palette[0] ?? { h: 220, s: 80 };
+        const glowPx    = Math.round(b * 70);        // 0–70px spread
+        const glowAlpha = (0.25 + b * 0.75).toFixed(3); // 0.25–1.0
+        const baseAlpha = (0.55 + b * 0.2).toFixed(3);
+        this.el.coverImg.style.boxShadow = [
+            `0 24px 64px rgba(0,0,0,${baseAlpha})`,
+            `0 0 ${glowPx}px hsla(${h},${s}%,65%,${glowAlpha})`,
+            `0 0 ${Math.round(glowPx * 0.4)}px hsla(${(h+30)%360},${s}%,80%,${(glowAlpha * 0.5).toFixed(3)})`,
+        ].join(', ');
     }
 }
 

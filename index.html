@@ -55,7 +55,9 @@
 
       <!-- Cover art + track metadata centred above visualizer -->
       <div class="now-playing" id="now-playing">
-        <div class="cover-art" id="cover-art-image"></div>
+        <div class="cover-art-wrap" id="cover-art-wrap">
+          <div class="cover-art" id="cover-art-image"></div>
+        </div>
         <div class="track-meta">
           <p class="track-name"  id="track-name">—</p>
           <p class="track-artist" id="track-artist"></p>
@@ -97,10 +99,6 @@
           <svg id="mode-icon-bars" viewBox="0 0 24 24" fill="currentColor">
             <path d="M4 18h2V6H4v12zm4 0h2V2H8v16zm4 0h2v-8h-2v8zm4 0h2V9h-2v9zm4 0h2v-5h-2v5z"/>
           </svg>
-          <svg id="mode-icon-wave" viewBox="0 0 24 24" fill="currentColor" style="display:none">
-            <path d="M2 12C3.5 7 5.5 4 7 4s3.5 3 5 8 3.5 8 5 8 3-3 3-8"
-              stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
-          </svg>
           <svg id="mode-icon-radial" viewBox="0 0 24 24" fill="currentColor" style="display:none">
             <circle cx="12" cy="12" r="3"/>
             <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"
@@ -135,6 +133,29 @@
           <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         </label>
         <input type="file" id="audio-input-more" accept="audio/*" class="sr-only" multiple>
+
+        <div class="ctrl-divider"></div>
+
+        <!-- Queue toggle -->
+        <button id="btn-queue" class="ctrl-btn ctrl-btn--icon ctrl-btn--queue" title="Queue (Q)" aria-label="Toggle queue">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M3 18h13v-2H3v2zm0-5h10v-2H3v2zm0-7v2h13V6H3zm18 9.59L17.42 12 21 8.41 19.59 7l-5 5 5 5L21 15.59z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- ═══ QUEUE SIDEBAR ═══ -->
+      <div class="queue-panel" id="queue-panel" aria-label="Queue">
+        <div class="queue-header">
+          <span class="queue-title">Queue</span>
+          <span class="queue-count" id="queue-count">0 tracks</span>
+          <button class="queue-close" id="queue-close" aria-label="Close queue">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="queue-list" id="queue-list"></div>
       </div>
 
     </div><!-- /player-screen -->
