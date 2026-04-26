@@ -458,18 +458,15 @@ html, body {
     pointer-events: none;
 }
 .lyrics-current {
-    font-size: 1.7rem;
-    font-weight: 800;
+    font-size: 1.55rem;
+    font-weight: 700;
     opacity: 1;
     color: #fff;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
     line-height: 1.35;
-    /* Static depth shadow + palette-reactive glow set by JS each frame */
-    text-shadow:
-        0 2px 28px rgba(0,0,0,0.75),
-        0 0 var(--lyric-glow-size, 0px) var(--lyric-glow-color, transparent);
+    /* Soft legibility shadow only — no reactive glow on text */
+    text-shadow: 0 2px 20px rgba(0,0,0,0.8), 0 0 40px rgba(0,0,0,0.5);
     transition: opacity 0.4s ease;
-    padding: 0 0.2rem;
 }
 .lyrics-next {
     font-size: 0;
@@ -481,41 +478,27 @@ html, body {
     pointer-events: none;
 }
 
-/* Wrapper — glassmorphism pill, fixed height, never shifts layout */
+/* Wrapper — clean, no background, fixed height keeps layout stable */
 .lyrics-current-wrap {
     position: relative;
-    min-height: 3.6rem;
+    min-height: 3rem;
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Glass pill */
-    background: rgba(10, 10, 22, 0.48);
-    backdrop-filter: blur(28px) saturate(160%);
-    -webkit-backdrop-filter: blur(28px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    border-radius: var(--radius-pill);
-    padding: 0.85rem 2.4rem 1rem;
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.5),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.04),
-        0 0 var(--lyric-glow-size, 0px) var(--lyric-glow-color, transparent);
-    overflow: hidden; /* clip the progress bar */
-    transition: box-shadow 0.1s linear;
+    padding-bottom: 8px; /* room for progress line */
 }
 
-/* Progress fill bar — grows left→right over the line's duration */
+/* Thin progress line under the text */
 .lyrics-progress {
     position: absolute;
-    bottom: 0; left: 0;
-    height: 2.5px;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 2px;
     width: 0%;
-    background: linear-gradient(
-        90deg,
-        var(--lyric-glow-color, rgba(255,255,255,0.4)) 0%,
-        rgba(255, 255, 255, 0.9) 100%
-    );
-    border-radius: 0 2px 0 0;
-    box-shadow: 0 0 10px var(--lyric-glow-color, rgba(255,255,255,0.4));
+    max-width: 260px;
+    background: rgba(255, 255, 255, 0.45);
+    border-radius: 2px;
     transition: width 0.12s linear;
     pointer-events: none;
 }
