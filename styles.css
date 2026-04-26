@@ -410,6 +410,126 @@ html, body {
 .toast.visible { opacity: 1; transform: translate(-50%, 0); }
 
 /* ══════════════════════════════════════════════════════════
+   LYRICS DISPLAY
+   ══════════════════════════════════════════════════════════ */
+
+.lyrics-display {
+    position: absolute;
+    bottom: calc(45vh + 1.6rem);
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(680px, 88vw);
+    text-align: center;
+    z-index: 8;
+    pointer-events: none;
+    /* Hidden until lyrics are loaded */
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+.lyrics-display.has-lyrics { opacity: 1; }
+
+/* Radial mode — float above controls */
+.player-screen.radial-mode .lyrics-display {
+    bottom: 7.5rem;
+}
+
+/* Line styles */
+.lyrics-line {
+    margin: 0;
+    padding: 0.15rem 0;
+    line-height: 1.45;
+    transition: opacity 0.45s ease, transform 0.45s ease, font-size 0.3s ease, color 0.3s ease;
+    white-space: pre-wrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.lyrics-prev {
+    font-size: 0.88rem;
+    opacity: 0.28;
+    transform: translateY(-3px);
+    color: #fff;
+    font-weight: 400;
+    margin-bottom: 0.3rem;
+}
+.lyrics-current {
+    font-size: 1.3rem;
+    font-weight: 700;
+    opacity: 1;
+    color: #fff;
+    letter-spacing: -0.01em;
+    text-shadow: 0 2px 24px rgba(0,0,0,0.6);
+}
+.lyrics-next {
+    font-size: 0.88rem;
+    opacity: 0.28;
+    transform: translateY(3px);
+    color: #fff;
+    font-weight: 400;
+    margin-top: 0.3rem;
+}
+
+/* Wrapper holds current line OR break dots */
+.lyrics-current-wrap { position: relative; min-height: 2rem; }
+
+/* Instrumental break indicator */
+.lyrics-break {
+    display: flex;
+    gap: 7px;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    min-height: 2.2rem;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+}
+.lyrics-display.is-break .lyrics-break  { opacity: 1; }
+.lyrics-display.is-break .lyrics-current { opacity: 0; }
+
+.lbreak-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.55);
+    animation: lbreak-pulse 1.3s ease-in-out infinite;
+}
+.lbreak-dot:nth-child(2) { animation-delay: 0.22s; }
+.lbreak-dot:nth-child(3) { animation-delay: 0.44s; }
+@keyframes lbreak-pulse {
+    0%, 100% { transform: scale(0.55); opacity: 0.25; }
+    50%       { transform: scale(1);    opacity: 0.85; }
+}
+
+/* Line-change slide animation */
+.lyrics-display.line-change .lyrics-prev    { animation: lyr-slide-in 0.35s ease forwards; }
+.lyrics-display.line-change .lyrics-current { animation: lyr-pop-in   0.35s ease forwards; }
+.lyrics-display.line-change .lyrics-next    { animation: lyr-slide-in 0.35s ease forwards; }
+@keyframes lyr-slide-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 0.28; transform: translateY(0); }
+}
+@keyframes lyr-pop-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+/* Override opacity for prev during animation */
+.lyrics-display.line-change .lyrics-prev { opacity: 0.28; }
+
+/* LRC button — glows when loaded */
+.ctrl-btn--lrc { color: var(--white-lo); }
+.ctrl-btn--lrc.lrc-loaded {
+    color: var(--white-hi);
+    background: rgba(255,255,255,0.1);
+    box-shadow: 0 0 10px rgba(255,255,255,0.12);
+}
+
+
+
+/* ══════════════════════════════════════════════════════════
    QUEUE SIDEBAR
    ══════════════════════════════════════════════════════════ */
 

@@ -1,16 +1,18 @@
 // imports
-import { AudioProcessor } from './audioProcessor.js';
+import { AudioProcessor }   from './audioProcessor.js';
 import { VisualizerRenderer } from './visualizerRenderer.js';
-import { MetadataParser } from './metadataParser.js';
-import { QueueManager } from './queueManager.js';
-import { formatTime } from './utils.js';
+import { MetadataParser }   from './metadataParser.js';
+import { QueueManager }     from './queueManager.js';
+import { LyricsEngine }     from './lyricsEngine.js';
+import { formatTime }       from './utils.js';
  
 class App {
     constructor() {
         this.audioEl = document.getElementById('audio');
         this.audioProcessor = new AudioProcessor(this.audioEl);
         this.visualizer = new VisualizerRenderer(document.getElementById('visualizer'));
-        this.queue = new QueueManager();
+        this.queue   = new QueueManager();
+        this.lyrics  = new LyricsEngine();
 
         // Beat detection state
         this._bassSmoothed = 0;
@@ -66,6 +68,14 @@ class App {
             queueClose:     document.getElementById('queue-close'),
             queueList:      document.getElementById('queue-list'),
             queueCount:     document.getElementById('queue-count'),
+            // Lyrics
+            lyricsDisplay:  document.getElementById('lyrics-display'),
+            lyricsPrev:     document.getElementById('lyrics-prev'),
+            lyricsCurrent:  document.getElementById('lyrics-current'),
+            lyricsNext:     document.getElementById('lyrics-next'),
+            lyricsBreak:    document.getElementById('lyrics-break'),
+            lrcInput:       document.getElementById('lrc-input'),
+            lrcBtn:         document.getElementById('lrc-btn'),
         };
 
         // Restore saved volume
@@ -75,6 +85,7 @@ class App {
 
         this._cursorTimeout = null;
         this._queueOpen = false;
+        this._lastLyricsState = null;
     }
 
     // ─── Events ────────────────────────────────────────────────
@@ -113,6 +124,25 @@ class App {
         this.el.queueClose.addEventListener('click', () => this._closeQueue());
         // Subscribe to queue changes so the sidebar auto-updates
         this.queue.onchange = () => this._renderQueue();
+
+        // LRC lyrics file load
+        this.el.lrcInput.addEventListener('change', e => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+                const ok = this.lyrics.load(ev.target.result);
+                if (ok) {
+                    this.el.lrcBtn.classList.add('lrc-loaded');
+                    this.el.lyricsDisplay.classList.add('has-lyrics');
+                    this._notify('Lyrics loaded ♪');
+                } else {
+                    this._notify('No lyrics found in file');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = ''; // allow re-selecting same file
+        });
 
         // Volume & mute
         this.el.volumeSlider.addEventListener('input', e => {
@@ -203,6 +233,15 @@ class App {
         this.el.trackName.textContent   = track.name;
         this.el.trackArtist.textContent = '';
         this.el.trackDuration.textContent = '0:00 / 0:00';
+
+        // Clear lyrics for new track
+        this.lyrics.clear();
+        this.el.lrcBtn.classList.remove('lrc-loaded');
+        this.el.lyricsDisplay.classList.remove('has-lyrics', 'is-break', 'line-change');
+        this.el.lyricsPrev.textContent = '';
+        this.el.lyricsCurrent.textContent = '';
+        this.el.lyricsNext.textContent = '';
+        this._lastLyricsState = null;
 
         // Extract metadata (cover + tags)
         const meta = await MetadataParser.extractMetadata(track.audioFile);
@@ -488,6 +527,7 @@ class App {
         const data = this.audioProcessor.getFrequencyData();
         this.visualizer.render(data, this.audioProcessor.isPlaying);
         this._updateBeatPulse(data);
+        this._updateLyricsDisplay();
     }
 
     /**
@@ -527,6 +567,40 @@ class App {
             `0 0 ${Math.round(glowPx * 0.4)}px hsla(${(h+30)%360},${s}%,80%,${(glowAlpha * 0.5).toFixed(3)})`,
         ].join(', ');
     }
+
+    // ─── Lyrics sync ──────────────────────────────────────────
+
+    _updateLyricsDisplay() {
+        if (!this.lyrics.isLoaded) return;
+
+        const state = this.lyrics.sync(this.audioEl.currentTime);
+        if (!state) return;
+
+        const el = this.el.lyricsDisplay;
+
+        // Toggle instrumental-break class
+        if (state.state === 'break') {
+            el.classList.add('is-break');
+        } else {
+            el.classList.remove('is-break');
+        }
+
+        // Only re-render DOM text when the active line changes
+        if (state.changed) {
+            this.el.lyricsPrev.textContent    = state.prev;
+            this.el.lyricsCurrent.textContent = state.current;
+            this.el.lyricsNext.textContent    = state.next;
+
+            // Trigger slide-in animation
+            el.classList.remove('line-change');
+            // Force reflow so animation restarts
+            void el.offsetWidth;
+            el.classList.add('line-change');
+            clearTimeout(this._lyricAnimTimer);
+            this._lyricAnimTimer = setTimeout(() => el.classList.remove('line-change'), 400);
+        }
+    }
 }
+
 
 document.addEventListener('DOMContentLoaded', () => new App());

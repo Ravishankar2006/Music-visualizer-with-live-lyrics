@@ -65,6 +65,20 @@
         </div>
       </div>
 
+      <!-- Lyrics display -->
+      <div class="lyrics-display" id="lyrics-display">
+        <p class="lyrics-line lyrics-prev" id="lyrics-prev"></p>
+        <div class="lyrics-current-wrap">
+          <p class="lyrics-line lyrics-current" id="lyrics-current"></p>
+          <div class="lyrics-break" id="lyrics-break">
+            <span class="lbreak-dot"></span>
+            <span class="lbreak-dot"></span>
+            <span class="lbreak-dot"></span>
+          </div>
+        </div>
+        <p class="lyrics-line lyrics-next" id="lyrics-next"></p>
+      </div>
+
       <!-- Visualizer canvas -->
       <div class="visualizer-section">
         <canvas id="visualizer"></canvas>
@@ -142,6 +156,16 @@
             <path d="M3 18h13v-2H3v2zm0-5h10v-2H3v2zm0-7v2h13V6H3zm18 9.59L17.42 12 21 8.41 19.59 7l-5 5 5 5L21 15.59z"/>
           </svg>
         </button>
+
+        <div class="ctrl-divider"></div>
+
+        <!-- Load LRC lyrics -->
+        <label for="lrc-input" class="ctrl-btn ctrl-btn--icon ctrl-btn--lrc" id="lrc-btn" title="Load lyrics (.lrc)" aria-label="Load LRC file">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+        </label>
+        <input type="file" id="lrc-input" accept=".lrc,.txt" class="sr-only">
       </div>
 
       <!-- ═══ QUEUE SIDEBAR ═══ -->

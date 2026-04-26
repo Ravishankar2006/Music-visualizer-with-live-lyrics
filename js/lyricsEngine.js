@@ -1,56 +1,109 @@
+/**
+ * LyricsEngine — LRC parser + frame-accurate sync
+ *
+ * Supports standard LRC: [mm:ss.xx] Line text
+ * Multi-timestamp per line: [00:12.34][00:45.67] text
+ *
+ * Gap detection:
+ *   Window to next line > GAP_THRESHOLD → surfaces state='break'
+ *   so the UI shows a ♪ pulse instead of frozen text.
+ */
 export class LyricsEngine {
+    static GAP_THRESHOLD = 4.5;  // seconds before we call it an instrumental break
+    static BREAK_START   = 0.40; // show indicator after 40% of the gap window
+
     constructor() {
-        this.lyrics = [];
+        this.lines    = [];
+        this._loaded  = false;
+        this._lastIdx = -1;
     }
 
-    parse(content, filename) {
-        if (filename.endsWith('.lrc')) {
-            this.lyrics = this.parseLRC(content);
-        } else {
-            this.lyrics = this.parsePlainText(content);
+    /** Parse an LRC string. Returns true if lines were found. */
+    load(lrcText) {
+        this.lines    = this._parse(lrcText);
+        this._loaded  = this.lines.length > 0;
+        this._lastIdx = -1;
+        return this._loaded;
+    }
+
+    /** Remove loaded lyrics. */
+    clear() {
+        this.lines    = [];
+        this._loaded  = false;
+        this._lastIdx = -1;
+    }
+
+    get isLoaded() { return this._loaded; }
+
+    /**
+     * Call each animation frame with audio.currentTime.
+     * Returns null when no lyrics, otherwise:
+     * {
+     *   state:    'before' | 'active' | 'break',
+     *   changed:  boolean,
+     *   prev:     string,
+     *   current:  string,
+     *   next:     string,
+     *   progress: number,   // 0–1 through current line's time window
+     * }
+     */
+    sync(t) {
+        if (!this._loaded) return null;
+
+        // Binary-search: last line with time ≤ t
+        let lo = 0, hi = this.lines.length - 1, idx = -1;
+        while (lo <= hi) {
+            const mid = (lo + hi) >> 1;
+            if (this.lines[mid].time <= t) { idx = mid; lo = mid + 1; }
+            else hi = mid - 1;
         }
-    }
 
-    parseLRC(content) {
-        const lines = content.split('\n');
-        const lyrics = [];
-        lines.forEach(line => {
-            const timeMatch = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
-            if (timeMatch) {
-                const minutes = parseInt(timeMatch[1]);
-                const seconds = parseInt(timeMatch[2]);
-                const centiseconds = parseInt(timeMatch[3]);
-                const time = minutes * 60 + seconds + centiseconds / 100;
-                const text = timeMatch[4].trim();
-                if (text.length > 0) {
-                    lyrics.push({ time, text, words: text.split(' ') });
-                }
-            }
-        });
-        return lyrics.sort((a, b) => a.time - b.time);
-    }
+        if (idx === -1) {
+            return { state: 'before', changed: false, prev: '', current: '', next: this.lines[0]?.text ?? '', progress: 0 };
+        }
 
-    parsePlainText(content) {
-        const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-        const lyrics = [];
-        let currentTime = 0;
-        lines.forEach(line => {
-            lyrics.push({ time: currentTime, text: line, words: line.split(' ') });
-            currentTime += 4; // 4 seconds per line
-        });
-        return lyrics;
-    }
+        const changed = idx !== this._lastIdx;
+        this._lastIdx = idx;
 
-    getCurrentLyricIndex(currentTime) {
-        if (!this.lyrics || this.lyrics.length === 0) return 0;
-        let index = 0;
-        for (let i = 0; i < this.lyrics.length; i++) {
-            if (currentTime >= this.lyrics[i].time) {
-                index = i;
-            } else {
-                break;
+        const cur  = this.lines[idx];
+        const next = this.lines[idx + 1] ?? null;
+        const prev = idx > 0 ? this.lines[idx - 1] : null;
+
+        let state = 'active', progress = 0;
+        if (next) {
+            const winDur  = next.time - cur.time;
+            const elapsed = t - cur.time;
+            progress = Math.min(1, elapsed / winDur);
+            if (winDur > LyricsEngine.GAP_THRESHOLD && progress > LyricsEngine.BREAK_START) {
+                state = 'break';
             }
         }
-        return index;
+
+        return { state, changed, prev: prev?.text ?? '', current: cur.text, next: next?.text ?? '', progress };
+    }
+
+    // ── LRC Parser ───────────────────────────────────────────────
+
+    _parse(lrc) {
+        const out     = [];
+        const TIME_RE = /\[(\d{1,3}):(\d{2}(?:\.\d+)?)\]/g;
+        const META_RE = /^\[(?:ar|ti|al|by|offset|length|re|ve|#):/i;
+
+        for (const raw of lrc.split('\n')) {
+            const line = raw.trim();
+            if (!line || META_RE.test(line)) continue;
+
+            const text = line.replace(/\[\d{1,3}:\d{2}(?:\.\d+)?\]/g, '').trim();
+            if (!text) continue; // skip blank / instrumental marker lines
+
+            TIME_RE.lastIndex = 0;
+            let m;
+            while ((m = TIME_RE.exec(line)) !== null) {
+                const time = parseInt(m[1], 10) * 60 + parseFloat(m[2]);
+                out.push({ time, text });
+            }
+        }
+
+        return out.sort((a, b) => a.time - b.time);
     }
 }
