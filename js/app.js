@@ -74,6 +74,7 @@ class App {
             lyricsCurrent:  document.getElementById('lyrics-current'),
             lyricsNext:     document.getElementById('lyrics-next'),
             lyricsBreak:    document.getElementById('lyrics-break'),
+            lyricsProgress: document.getElementById('lyrics-progress'),
             lrcInput:       document.getElementById('lrc-input'),
             lrcBtn:         document.getElementById('lrc-btn'),
         };
@@ -566,6 +567,15 @@ class App {
             `0 0 ${glowPx}px hsla(${h},${s}%,65%,${glowAlpha})`,
             `0 0 ${Math.round(glowPx * 0.4)}px hsla(${(h+30)%360},${s}%,80%,${(glowAlpha * 0.5).toFixed(3)})`,
         ].join(', ');
+
+        // ── Push palette glow to lyrics pill ──
+        if (this.lyrics.isLoaded) {
+            const lyricGlowSize  = Math.round(b * 28);
+            const lyricGlowAlpha = (0.25 + b * 0.65).toFixed(3);
+            const lyricColor = `hsla(${h},${s}%,72%,${lyricGlowAlpha})`;
+            this.el.lyricsDisplay.style.setProperty('--lyric-glow-size',  `${lyricGlowSize}px`);
+            this.el.lyricsDisplay.style.setProperty('--lyric-glow-color', lyricColor);
+        }
     }
 
     // ─── Lyrics sync ──────────────────────────────────────────
@@ -591,13 +601,20 @@ class App {
             this.el.lyricsCurrent.textContent = state.current;
             this.el.lyricsNext.textContent    = state.next;
 
+            // Reset progress bar on new line
+            this.el.lyricsProgress.style.width = '0%';
+
             // Trigger slide-in animation
             el.classList.remove('line-change');
-            // Force reflow so animation restarts
             void el.offsetWidth;
             el.classList.add('line-change');
             clearTimeout(this._lyricAnimTimer);
             this._lyricAnimTimer = setTimeout(() => el.classList.remove('line-change'), 400);
+        }
+
+        // Update progress bar every frame
+        if (state.state !== 'break') {
+            this.el.lyricsProgress.style.width = `${(state.progress * 100).toFixed(1)}%`;
         }
     }
 }

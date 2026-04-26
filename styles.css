@@ -428,9 +428,11 @@ html, body {
 }
 .lyrics-display.has-lyrics { opacity: 1; }
 
-/* Radial mode — float above controls */
+/* Radial mode — move lyrics to TOP (above the ring) to avoid
+   clashing with track-meta + controls at the bottom              */
 .player-screen.radial-mode .lyrics-display {
-    bottom: 7.5rem;
+    bottom: auto;
+    top: 1.8rem;
 }
 
 /* Line styles */
@@ -447,32 +449,76 @@ html, body {
     -webkit-box-orient: vertical;
 }
 .lyrics-prev {
-    font-size: 0.88rem;
-    opacity: 0.28;
-    transform: translateY(-3px);
-    color: #fff;
-    font-weight: 400;
-    margin-bottom: 0.3rem;
+    font-size: 0;
+    opacity: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    pointer-events: none;
 }
 .lyrics-current {
-    font-size: 1.3rem;
-    font-weight: 700;
+    font-size: 1.7rem;
+    font-weight: 800;
     opacity: 1;
     color: #fff;
-    letter-spacing: -0.01em;
-    text-shadow: 0 2px 24px rgba(0,0,0,0.6);
+    letter-spacing: -0.025em;
+    line-height: 1.35;
+    /* Static depth shadow + palette-reactive glow set by JS each frame */
+    text-shadow:
+        0 2px 28px rgba(0,0,0,0.75),
+        0 0 var(--lyric-glow-size, 0px) var(--lyric-glow-color, transparent);
+    transition: opacity 0.4s ease;
+    padding: 0 0.2rem;
 }
 .lyrics-next {
-    font-size: 0.88rem;
-    opacity: 0.28;
-    transform: translateY(3px);
-    color: #fff;
-    font-weight: 400;
-    margin-top: 0.3rem;
+    font-size: 0;
+    opacity: 0;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    pointer-events: none;
 }
 
-/* Wrapper holds current line OR break dots */
-.lyrics-current-wrap { position: relative; min-height: 2rem; }
+/* Wrapper — glassmorphism pill, fixed height, never shifts layout */
+.lyrics-current-wrap {
+    position: relative;
+    min-height: 3.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Glass pill */
+    background: rgba(10, 10, 22, 0.48);
+    backdrop-filter: blur(28px) saturate(160%);
+    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--radius-pill);
+    padding: 0.85rem 2.4rem 1rem;
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.5),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 0 var(--lyric-glow-size, 0px) var(--lyric-glow-color, transparent);
+    overflow: hidden; /* clip the progress bar */
+    transition: box-shadow 0.1s linear;
+}
+
+/* Progress fill bar — grows left→right over the line's duration */
+.lyrics-progress {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 2.5px;
+    width: 0%;
+    background: linear-gradient(
+        90deg,
+        var(--lyric-glow-color, rgba(255,255,255,0.4)) 0%,
+        rgba(255, 255, 255, 0.9) 100%
+    );
+    border-radius: 0 2px 0 0;
+    box-shadow: 0 0 10px var(--lyric-glow-color, rgba(255,255,255,0.4));
+    transition: width 0.12s linear;
+    pointer-events: none;
+}
 
 /* Instrumental break indicator */
 .lyrics-break {
@@ -494,7 +540,7 @@ html, body {
 .lbreak-dot {
     width: 7px; height: 7px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.55);
+    background: var(--lyric-glow-color, rgba(255,255,255,0.55));
     animation: lbreak-pulse 1.3s ease-in-out infinite;
 }
 .lbreak-dot:nth-child(2) { animation-delay: 0.22s; }
@@ -504,20 +550,14 @@ html, body {
     50%       { transform: scale(1);    opacity: 0.85; }
 }
 
-/* Line-change slide animation */
-.lyrics-display.line-change .lyrics-prev    { animation: lyr-slide-in 0.35s ease forwards; }
-.lyrics-display.line-change .lyrics-current { animation: lyr-pop-in   0.35s ease forwards; }
-.lyrics-display.line-change .lyrics-next    { animation: lyr-slide-in 0.35s ease forwards; }
-@keyframes lyr-slide-in {
-    from { opacity: 0; transform: translateY(8px); }
-    to   { opacity: 0.28; transform: translateY(0); }
+/* Line-change pop animation — only current line is visible */
+.lyrics-display.line-change .lyrics-current {
+    animation: lyr-pop-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 @keyframes lyr-pop-in {
-    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    from { opacity: 0; transform: translateY(14px) scale(0.95); }
     to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
-/* Override opacity for prev during animation */
-.lyrics-display.line-change .lyrics-prev { opacity: 0.28; }
 
 /* LRC button — glows when loaded */
 .ctrl-btn--lrc { color: var(--white-lo); }
