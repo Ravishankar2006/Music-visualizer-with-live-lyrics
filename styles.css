@@ -542,12 +542,20 @@ html, body {
     to   { opacity: 1; transform: translateY(0)    scale(1);    }
 }
 
-/* LRC button — glows when loaded */
+/* LRC button — glows when loaded, pulses while fetching */
 .ctrl-btn--lrc { color: var(--white-lo); }
 .ctrl-btn--lrc.lrc-loaded {
     color: var(--white-hi);
     background: rgba(255,255,255,0.1);
     box-shadow: 0 0 10px rgba(255,255,255,0.12);
+}
+.ctrl-btn--lrc.lrc-fetching {
+    color: var(--white-mid);
+    animation: lrc-fetch-pulse 0.9s ease-in-out infinite alternate;
+}
+@keyframes lrc-fetch-pulse {
+    from { opacity: 0.4; transform: scale(0.9); }
+    to   { opacity: 1.0; transform: scale(1.05); }
 }
 
 

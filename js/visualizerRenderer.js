@@ -6,7 +6,7 @@ export class VisualizerRenderer {
         this.ctx    = canvas.getContext('2d');
 
         // Mode: 'bars' | 'radial'
-        this.mode = 'bars';
+        this.mode   = 'bars';
         this._modes = ['bars', 'radial'];
 
         // Colour palette (HSL objects) — updated from cover art
@@ -20,8 +20,18 @@ export class VisualizerRenderer {
         this.beatFlashAlpha = 0;
         this.beatFlashHue   = 220;
 
-        // Radial rotation (slow spin on idle)
+        // Radial rotation
         this._radialAngle = 0;
+
+        // Particles
+        this._particles        = [];
+        this._particleCooldown = 0;
+
+        // Frame timing for particle physics
+        this._lastFrameTime = performance.now();
+
+        // Aurora smoothed intensity
+        this._auroraIntensity = 0;
 
         this.resize();
         window.addEventListener('resize', () => this.resize());
@@ -36,21 +46,17 @@ export class VisualizerRenderer {
             : window.innerHeight * 0.45;
     }
 
-    /** Cycle to the next visualizer mode. Returns the new mode name. */
     nextMode() {
-        const idx = this._modes.indexOf(this.mode);
-        this.mode = this._modes[(idx + 1) % this._modes.length];
-        // Reset per-mode state
+        const idx  = this._modes.indexOf(this.mode);
+        this.mode  = this._modes[(idx + 1) % this._modes.length];
         this.peaks = [];
         return this.mode;
     }
 
-    /** Set colour palette from cover art URL (async, non-blocking). */
     async setPaletteFromUrl(imageUrl) {
         this.palette = await ColorExtractor.extract(imageUrl, 4);
     }
 
-    /** Reset to neutral palette (no cover art). */
     resetPalette() {
         this.palette = ColorExtractor.defaultPalette();
     }
@@ -58,6 +64,10 @@ export class VisualizerRenderer {
     // ─── Main render dispatch ──────────────────────────────────
 
     render(audioData, isPlaying) {
+        const now = performance.now();
+        const dt  = Math.min((now - this._lastFrameTime) / 1000, 0.05);
+        this._lastFrameTime = now;
+
         const { width, height } = this.canvas;
         this.ctx.clearRect(0, 0, width, height);
 
@@ -67,18 +77,24 @@ export class VisualizerRenderer {
         }
 
         const { dataArray, bufferLength } = audioData;
-        this._detectBeat(dataArray, bufferLength);
+
+        // Order matters: aurora → beat flash → bars/radial → particles on top
+        this._detectBeat(dataArray, bufferLength, dt);
+        this._drawAurora(dataArray, bufferLength);
         this._drawBeatFlash();
+        this._updateParticles(dt);
 
         switch (this.mode) {
             case 'bars':   this._drawBars(dataArray, bufferLength);   break;
             case 'radial': this._drawRadial(dataArray, bufferLength); break;
         }
+
+        this._drawParticles();
     }
 
     // ─── Beat detection ────────────────────────────────────────
 
-    _detectBeat(dataArray, bufferLength) {
+    _detectBeat(dataArray, bufferLength, dt) {
         const bassLen = Math.floor(bufferLength * 0.1);
         let bassSum = 0;
         for (let i = 0; i < bassLen; i++) bassSum += dataArray[i];
@@ -86,11 +102,22 @@ export class VisualizerRenderer {
 
         if (bassAvg > 200) {
             this.beatFlashAlpha = 0.16;
-            // Tint flash with the dominant palette colour
-            this.beatFlashHue = this.palette[0]?.h ?? 220;
+            this.beatFlashHue   = this.palette[0]?.h ?? 220;
+
+            // Spawn particles on strong beats with cooldown
+            if (this._particleCooldown <= 0) {
+                const { width, height } = this.canvas;
+                const cx = width / 2;
+                const cy = this.mode === 'radial' ? height / 2 : height * 0.5;
+                const count = Math.round(14 + (bassAvg - 200) / 55 * 14);
+                this._spawnParticles(cx, cy, count);
+                this._particleCooldown = 0.22;
+            }
         } else {
             this.beatFlashAlpha *= 0.82;
         }
+
+        if (this._particleCooldown > 0) this._particleCooldown -= dt;
     }
 
     _drawBeatFlash() {
@@ -104,6 +131,123 @@ export class VisualizerRenderer {
         g.addColorStop(1, `hsla(${this.beatFlashHue},80%,60%,0)`);
         this.ctx.fillStyle = g;
         this.ctx.fillRect(0, 0, width, height);
+    }
+
+    // ─── Aurora background ─────────────────────────────────────
+
+    _drawAurora(dataArray, bufferLength) {
+        const { width, height } = this.canvas;
+
+        // Average bass energy
+        const bassLen = Math.floor(bufferLength * 0.08);
+        let bassSum = 0;
+        for (let i = 0; i < bassLen; i++) bassSum += dataArray[i];
+        const bassRaw = (bassSum / bassLen) / 255;
+
+        // Smooth intensity: fast attack, slow decay
+        this._auroraIntensity += (bassRaw - this._auroraIntensity)
+            * (bassRaw > this._auroraIntensity ? 0.35 : 0.05);
+        const intensity = this._auroraIntensity;
+        if (intensity < 0.015) return;
+
+        const { h: h0, s: s0 } = this.palette[0] ?? { h: 220, s: 80 };
+        const { h: h1, s: s1 } = this.palette[1] ?? { h: (h0 + 60) % 360, s: s0 };
+        const h2 = (h0 + 130) % 360;
+
+        const alpha = intensity * 0.30;
+
+        // Primary blob — bottom center, expands with bass
+        const r1 = width * (0.55 + intensity * 0.2);
+        const g1 = this.ctx.createRadialGradient(
+            width * 0.5, height * (1.05 - intensity * 0.25), 0,
+            width * 0.5, height,
+            r1
+        );
+        g1.addColorStop(0,   `hsla(${h0},${s0}%,55%,${(alpha * 0.95).toFixed(3)})`);
+        g1.addColorStop(0.45,`hsla(${h0},${s0}%,45%,${(alpha * 0.35).toFixed(3)})`);
+        g1.addColorStop(1,   `hsla(${h0},${s0}%,35%,0)`);
+        this.ctx.fillStyle = g1;
+        this.ctx.fillRect(0, 0, width, height);
+
+        // Secondary blob — top-left, complementary hue
+        const r2 = width * (0.38 + intensity * 0.12);
+        const g2 = this.ctx.createRadialGradient(
+            width * 0.12, height * 0.18, 0,
+            width * 0.12, height * 0.18,
+            r2
+        );
+        g2.addColorStop(0, `hsla(${h1},${s1}%,50%,${(alpha * 0.55).toFixed(3)})`);
+        g2.addColorStop(1, `hsla(${h1},${s1}%,40%,0)`);
+        this.ctx.fillStyle = g2;
+        this.ctx.fillRect(0, 0, width, height);
+
+        // Tertiary blob — right side, triadic hue
+        const r3 = width * (0.28 + intensity * 0.1);
+        const g3 = this.ctx.createRadialGradient(
+            width * 0.88, height * 0.55, 0,
+            width * 0.88, height * 0.55,
+            r3
+        );
+        g3.addColorStop(0, `hsla(${h2},70%,50%,${(alpha * 0.42).toFixed(3)})`);
+        g3.addColorStop(1, `hsla(${h2},70%,40%,0)`);
+        this.ctx.fillStyle = g3;
+        this.ctx.fillRect(0, 0, width, height);
+    }
+
+    // ─── Particles ─────────────────────────────────────────────
+
+    _spawnParticles(cx, cy, count) {
+        const { h, s } = this.palette[0] ?? { h: 220, s: 80 };
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 90 + Math.random() * 230;
+            const hue   = (h + (Math.random() - 0.5) * 70 + 360) % 360;
+            this._particles.push({
+                x:     cx + (Math.random() - 0.5) * 16,
+                y:     cy + (Math.random() - 0.5) * 16,
+                vx:    Math.cos(angle) * speed,
+                vy:    Math.sin(angle) * speed,
+                life:  1.0,
+                decay: 1.4 + Math.random() * 1.6,
+                size:  2 + Math.random() * 4.5,
+                h:     hue,
+                s:     s,
+            });
+        }
+        // Cap to avoid runaway memory
+        if (this._particles.length > 350) {
+            this._particles.splice(0, this._particles.length - 350);
+        }
+    }
+
+    _updateParticles(dt) {
+        for (let i = this._particles.length - 1; i >= 0; i--) {
+            const p = this._particles[i];
+            p.x  += p.vx * dt;
+            p.y  += p.vy * dt;
+            p.vx *= 0.93; // air friction
+            p.vy *= 0.93;
+            p.life -= p.decay * dt;
+            if (p.life <= 0) this._particles.splice(i, 1);
+        }
+    }
+
+    _drawParticles() {
+        if (this._particles.length === 0) return;
+        const ctx = this.ctx;
+        ctx.save();
+        for (const p of this._particles) {
+            const alpha = Math.pow(Math.max(0, p.life), 1.5);
+            const r     = Math.max(0.5, p.size * p.life);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            ctx.fillStyle  = `hsla(${p.h},${p.s}%,78%,${alpha.toFixed(3)})`;
+            ctx.shadowColor = `hsla(${p.h},${p.s}%,78%,${(alpha * 0.65).toFixed(3)})`;
+            ctx.shadowBlur  = 7;
+            ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+        ctx.restore();
     }
 
     // ─── Idle / static state ───────────────────────────────────
@@ -125,83 +269,104 @@ export class VisualizerRenderer {
     }
 
     // ══════════════════════════════════════════════════════════
-    //   MODE 1 — MIRRORED BARS
+    //   MODE 1 — CENTER-MIRRORED BARS (LOGARITHMIC SCALE)
     // ══════════════════════════════════════════════════════════
 
     _drawBars(dataArray, bufferLength) {
         const { width, height } = this.canvas;
-        const usefulLen  = Math.floor(bufferLength * 0.4);
-        const gap        = 2;
-        const bw         = (width - gap * (usefulLen - 1)) / usefulLen;
-        const centerY    = height / 2;
-        const maxHalf    = height * 0.47;
+        // Only use lower 50% of FFT bins (audible range)
+        const usefulLen = Math.floor(bufferLength * 0.5);
+        const gap       = 2;
+        const N         = 80;                    // bars per side → 160 total
+        const bw        = (width - gap * (N * 2 - 1)) / (N * 2);
+        const centerY   = height / 2;
+        const maxHalf   = height * 0.47;
 
-        if (this.peaks.length !== usefulLen) {
-            this.peaks          = new Array(usefulLen).fill(0);
-            this.peakVelocities = new Array(usefulLen).fill(0);
+        // Re-init peaks array if bar count changed
+        if (this.peaks.length !== N) {
+            this.peaks          = new Array(N).fill(0);
+            this.peakVelocities = new Array(N).fill(0);
         }
 
-        for (let i = 0; i < usefulLen; i++) {
-            const raw = dataArray[i] / 255;
-            const bh  = Math.pow(raw, 1.2) * maxHalf;
-            if (bh < 1) continue;
+        for (let j = 0; j < N; j++) {
+            // Logarithmic bin: j=0 → lowest freq, j=N-1 → highest
+            const t      = j / (N - 1);
+            const binIdx = Math.min(
+                Math.round(Math.pow(t, 1.9) * usefulLen),
+                usefulLen - 1
+            );
+            const raw = dataArray[binIdx] / 255;
+            const bh  = Math.pow(raw, 1.15) * maxHalf;
 
-            const x = i * (bw + gap);
-
-            // Pick glow colour from palette at bar position
-            const { h, s } = ColorExtractor.interpolate(this.palette, i / usefulLen);
-            // Shift lightness by amplitude (louder = warmer hue shift)
-            const glowH     = h - raw * 30;
-            const glowAlpha = 0.3 + raw * 0.7;
+            // Color along palette gradient
+            const { h, s }   = ColorExtractor.interpolate(this.palette, t);
+            const glowH      = (h - raw * 30 + 360) % 360;
+            const glowAlpha  = 0.3 + raw * 0.7;
             const glowSpread = 6 + raw * 22;
+            const alphaTop   = 0.55 + raw * 0.45;
 
-            // Upper bar
-            const alphaTop = 0.55 + raw * 0.45;
-            const gradUp   = this.ctx.createLinearGradient(0, centerY - bh, 0, centerY);
-            gradUp.addColorStop(0,   `rgba(255,255,255,${alphaTop})`);
-            gradUp.addColorStop(0.6, `rgba(255,255,255,${alphaTop * 0.8})`);
-            gradUp.addColorStop(1,   `rgba(255,255,255,0.04)`);
+            // Left bar: j=0 at far-left edge, j=N-1 is just left of center
+            const xLeft  = (N - 1 - j) * (bw + gap);
+            // Right bar: j=0 just right of center, j=N-1 at far-right edge
+            const xRight = (N + j)     * (bw + gap);
 
-            this.ctx.shadowColor = `hsla(${glowH},${s}%,70%,${glowAlpha})`;
-            this.ctx.shadowBlur  = glowSpread;
-            this.ctx.fillStyle   = gradUp;
-            this._roundedBar(x, centerY - bh, bw, bh, 3);
+            if (bh >= 1) {
+                for (const x of [xLeft, xRight]) {
+                    // Upper bar
+                    const gradUp = this.ctx.createLinearGradient(0, centerY - bh, 0, centerY);
+                    gradUp.addColorStop(0,   `rgba(255,255,255,${alphaTop.toFixed(3)})`);
+                    gradUp.addColorStop(0.6, `rgba(255,255,255,${(alphaTop * 0.8).toFixed(3)})`);
+                    gradUp.addColorStop(1,   `rgba(255,255,255,0.04)`);
 
-            // Mirror bar
-            const gradDown = this.ctx.createLinearGradient(0, centerY, 0, centerY + bh);
-            gradDown.addColorStop(0, `rgba(255,255,255,${alphaTop * 0.3})`);
-            gradDown.addColorStop(1, `rgba(255,255,255,0)`);
-            this.ctx.fillStyle  = gradDown;
-            this.ctx.shadowBlur = 0;
-            this._roundedBar(x, centerY, bw, bh, 3);
+                    this.ctx.shadowColor = `hsla(${glowH},${s}%,70%,${glowAlpha})`;
+                    this.ctx.shadowBlur  = glowSpread;
+                    this.ctx.fillStyle   = gradUp;
+                    this._roundedBar(x, centerY - bh, bw, bh, 3);
 
-            // Peak marker
-            if (bh >= this.peaks[i]) {
-                this.peaks[i]          = bh;
-                this.peakVelocities[i] = 0;
-            } else {
-                this.peakVelocities[i] += 0.4;
-                this.peaks[i] -= this.peakVelocities[i];
-                if (this.peaks[i] < 0) this.peaks[i] = 0;
+                    // Mirror reflection below centerline
+                    const gradDown = this.ctx.createLinearGradient(0, centerY, 0, centerY + bh);
+                    gradDown.addColorStop(0, `rgba(255,255,255,${(alphaTop * 0.3).toFixed(3)})`);
+                    gradDown.addColorStop(1, `rgba(255,255,255,0)`);
+                    this.ctx.fillStyle  = gradDown;
+                    this.ctx.shadowBlur = 0;
+                    this._roundedBar(x, centerY, bw, bh, 3);
+                }
             }
 
-            if (this.peaks[i] > 3) {
-                const peakY     = centerY - this.peaks[i] - 4;
-                const peakAlpha = Math.min(1, this.peaks[i] / maxHalf * 1.5);
-                this.ctx.shadowColor = `hsla(${glowH},${s}%,85%,${peakAlpha * 0.9})`;
+            // Peak markers (one per frequency bin, drawn on both sides)
+            if (bh >= this.peaks[j]) {
+                this.peaks[j]          = bh;
+                this.peakVelocities[j] = 0;
+            } else {
+                this.peakVelocities[j] += 0.4;
+                this.peaks[j] -= this.peakVelocities[j];
+                if (this.peaks[j] < 0) this.peaks[j] = 0;
+            }
+
+            const peakH = this.peaks[j];
+            if (peakH > 3) {
+                const peakY     = centerY - peakH - 4;
+                const peakAlpha = Math.min(1, peakH / maxHalf * 1.5);
+                this.ctx.shadowColor = `hsla(${glowH},${s}%,85%,${(peakAlpha * 0.9).toFixed(3)})`;
                 this.ctx.shadowBlur  = 8;
-                this.ctx.fillStyle   = `rgba(255,255,255,${peakAlpha})`;
+                this.ctx.fillStyle   = `rgba(255,255,255,${peakAlpha.toFixed(3)})`;
+                const pr = Math.min(bw / 2, 3);
+                // Left peak dot
                 this.ctx.beginPath();
-                this.ctx.arc(x + bw / 2, peakY, Math.min(bw / 2, 3), 0, Math.PI * 2);
+                this.ctx.arc(xLeft + bw / 2, peakY, pr, 0, Math.PI * 2);
+                this.ctx.fill();
+                // Right peak dot
+                this.ctx.beginPath();
+                this.ctx.arc(xRight + bw / 2, peakY, pr, 0, Math.PI * 2);
                 this.ctx.fill();
                 this.ctx.shadowBlur = 0;
             }
         }
 
-        // Centre divider
-        this.ctx.shadowBlur   = 0;
-        this.ctx.strokeStyle  = 'rgba(255,255,255,0.12)';
-        this.ctx.lineWidth    = 1;
+        // Centre divider line
+        this.ctx.shadowBlur  = 0;
+        this.ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        this.ctx.lineWidth   = 1;
         this.ctx.beginPath();
         this.ctx.moveTo(0, centerY);
         this.ctx.lineTo(width, centerY);
@@ -214,32 +379,35 @@ export class VisualizerRenderer {
 
     _drawRadial(dataArray, bufferLength) {
         const { width, height } = this.canvas;
-        const cx = width / 2;
+        const cx = width  / 2;
         const cy = height / 2;
 
         const usefulLen = Math.floor(bufferLength * 0.6);
-        // innerR is just outside the 170px cover art (half = 85px)
         const innerR    = 108;
         const maxBarLen = Math.min(width, height) * 0.36;
         const angleStep = (Math.PI * 2) / usefulLen;
 
-        // Slightly faster rotation for liveliness
         this._radialAngle += 0.0015;
 
-        // ── Dark vignette behind cover art so it pops over the ring ──
+        // Dark vignette behind cover art
         const vigR = innerR - 4;
         const vig  = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, vigR);
-        vig.addColorStop(0,   'rgba(0,0,0,0.82)');
-        vig.addColorStop(0.75,'rgba(0,0,0,0.60)');
-        vig.addColorStop(1,   'rgba(0,0,0,0)');
+        vig.addColorStop(0,    'rgba(0,0,0,0.82)');
+        vig.addColorStop(0.75, 'rgba(0,0,0,0.60)');
+        vig.addColorStop(1,    'rgba(0,0,0,0)');
         this.ctx.fillStyle = vig;
         this.ctx.beginPath();
         this.ctx.arc(cx, cy, vigR, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // ── Radial bars ──
+        // Radial bars with log-scale mapping
         for (let i = 0; i < usefulLen; i++) {
-            const raw = dataArray[i] / 255;
+            const t      = i / usefulLen;
+            const binIdx = Math.min(
+                Math.round(Math.pow(t, 1.6) * usefulLen),
+                usefulLen - 1
+            );
+            const raw = dataArray[binIdx] / 255;
             const len = Math.pow(raw, 0.85) * maxBarLen;
             if (len < 1) continue;
 
@@ -249,29 +417,27 @@ export class VisualizerRenderer {
             const x2 = cx + Math.cos(angle) * (innerR + len);
             const y2 = cy + Math.sin(angle) * (innerR + len);
 
-            const { h, s } = ColorExtractor.interpolate(this.palette, i / usefulLen);
-            const glowHue = (h - raw * 30 + 360) % 360;
+            const { h, s } = ColorExtractor.interpolate(this.palette, t);
+            const glowHue  = (h - raw * 30 + 360) % 360;
 
             this.ctx.shadowColor = `hsla(${glowHue},${s}%,70%,${0.35 + raw * 0.65})`;
             this.ctx.shadowBlur  = 8 + raw * 28;
             this.ctx.strokeStyle = `rgba(255,255,255,${0.45 + raw * 0.55})`;
             this.ctx.lineWidth   = Math.max(1.5, 2 + raw * 4);
             this.ctx.lineCap     = 'round';
-
             this.ctx.beginPath();
             this.ctx.moveTo(x1, y1);
             this.ctx.lineTo(x2, y2);
             this.ctx.stroke();
         }
 
-        // ── Bass-pulsing border circle around cover art ──
-        const bassRaw  = dataArray[0] / 255;
-        const midRaw   = dataArray[Math.floor(usefulLen * 0.3)] / 255;
-        const circleR  = innerR * (0.92 + bassRaw * 0.12);
+        // Bass-pulsing border circles around cover art
+        const bassRaw = dataArray[0] / 255;
+        const midRaw  = dataArray[Math.floor(usefulLen * 0.3)] / 255;
+        const circleR = innerR * (0.92 + bassRaw * 0.12);
         const { h: h0, s: s0 } = this.palette[0] ?? { h: 220, s: 80 };
         const { h: h1, s: s1 } = this.palette[1] ?? { h: h0 + 40, s: s0 };
 
-        // Outer glow ring (wider, dimmer)
         this.ctx.shadowColor = `hsla(${h0},${s0}%,75%,${0.6 + bassRaw * 0.4})`;
         this.ctx.shadowBlur  = 18 + bassRaw * 40;
         this.ctx.strokeStyle = `hsla(${h1},${s1}%,80%,${0.3 + midRaw * 0.5})`;
@@ -280,7 +446,6 @@ export class VisualizerRenderer {
         this.ctx.arc(cx, cy, circleR + 8, 0, Math.PI * 2);
         this.ctx.stroke();
 
-        // Inner tight ring
         this.ctx.shadowBlur  = 6 + bassRaw * 20;
         this.ctx.strokeStyle = `rgba(255,255,255,${0.5 + bassRaw * 0.5})`;
         this.ctx.lineWidth   = 1.5 + bassRaw * 2;
@@ -293,10 +458,10 @@ export class VisualizerRenderer {
     // ─── Shared drawing helper ─────────────────────────────────
 
     _roundedBar(x, y, width, height, radius) {
-        const r = Math.min(radius, width / 2, Math.abs(height) / 2);
+        const r      = Math.min(radius, width / 2, Math.abs(height) / 2);
         if (height === 0) return;
-        const isUp  = height > 0;
-        const top   = isUp ? y : y + height;
+        const isUp   = height > 0;
+        const top    = isUp ? y : y + height;
         const bottom = isUp ? y + height : y;
         this.ctx.beginPath();
         if (isUp) {

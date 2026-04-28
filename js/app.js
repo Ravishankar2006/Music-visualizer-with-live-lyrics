@@ -262,7 +262,6 @@ class App {
             this.el.coverImg.classList.add('has-cover');
             this.el.coverImg.textContent = '';
             this.el.coverBg.style.backgroundImage = `url(${meta.coverUrl})`;
-            // Feature 7: extract palette from cover art and pass to visualizer
             this.visualizer.setPaletteFromUrl(meta.coverUrl);
         } else {
             this.el.coverBg.style.backgroundImage = 'none';
@@ -272,6 +271,11 @@ class App {
 
         this.audioProcessor.play();
         this._renderQueue();
+
+        // Auto-fetch LRC from lrclib.net if we have a title
+        if (meta.title) {
+            this._fetchLRC(meta.title, meta.artist || '');
+        }
     }
 
     // ─── Playback ──────────────────────────────────────────────
@@ -615,6 +619,39 @@ class App {
         // Update progress bar every frame
         if (state.state !== 'break') {
             this.el.lyricsProgress.style.width = `${(state.progress * 100).toFixed(1)}%`;
+        }
+    }
+
+    // ─── Auto LRC fetch ────────────────────────────────────────
+
+    async _fetchLRC(title, artist) {
+        // Show fetching state on button
+        this.el.lrcBtn.classList.add('lrc-fetching');
+
+        try {
+            const params = new URLSearchParams({ track_name: title });
+            if (artist) params.set('artist_name', artist);
+            const res = await fetch(`https://lrclib.net/api/get?${params}`, {
+                headers: { 'Lrclib-Client': 'MusicVisualizer/1.0' },
+            });
+
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data = await res.json();
+
+            const lrcText = data.syncedLyrics || data.plainLyrics || '';
+            if (!lrcText) throw new Error('No lyrics in response');
+
+            const ok = this.lyrics.load(lrcText);
+            if (ok) {
+                this.el.lrcBtn.classList.add('lrc-loaded');
+                this.el.lyricsDisplay.classList.add('has-lyrics');
+                this._notify('♪ Lyrics fetched automatically');
+            }
+        } catch (err) {
+            // Silently fail — user can still load LRC manually
+            console.debug('[LRC fetch]', err.message);
+        } finally {
+            this.el.lrcBtn.classList.remove('lrc-fetching');
         }
     }
 }
