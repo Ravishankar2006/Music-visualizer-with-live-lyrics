@@ -51,6 +51,16 @@ html, body {
 }
 .cover-art-background.visible { opacity: 0.85; }
 
+/* ── Aurora fullscreen canvas ──────────────────────────────── */
+.aurora-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;          /* above cover-bg(0), below player(10) */
+    pointer-events: none;
+}
+
 /* ── Root container ────────────────────────────────────────── */
 .main-container {
     position: relative;

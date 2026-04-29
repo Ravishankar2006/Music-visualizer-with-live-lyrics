@@ -11,6 +11,7 @@ class App {
         this.audioEl = document.getElementById('audio');
         this.audioProcessor = new AudioProcessor(this.audioEl);
         this.visualizer = new VisualizerRenderer(document.getElementById('visualizer'));
+        this.visualizer.setAuroraCanvas(document.getElementById('aurora-canvas'));
         this.queue   = new QueueManager();
         this.lyrics  = new LyricsEngine();
 
