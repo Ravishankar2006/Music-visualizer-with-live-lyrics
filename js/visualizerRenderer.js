@@ -33,17 +33,35 @@ export class VisualizerRenderer {
         // Aurora smoothed intensity
         this._auroraIntensity = 0;
 
+        // Dedicated fullscreen aurora canvas (set via setAuroraCanvas)
+        this._auroraCanvas = null;
+        this._auroraCtx    = null;
+
         this.resize();
         window.addEventListener('resize', () => this.resize());
     }
 
     // ─── Public API ────────────────────────────────────────────
 
+    /** Pass the fullscreen #aurora-canvas so aurora fills the whole viewport. */
+    setAuroraCanvas(canvas) {
+        this._auroraCanvas = canvas;
+        this._auroraCtx    = canvas.getContext('2d');
+        this._resizeAurora();
+    }
+
     resize() {
         this.canvas.width  = window.innerWidth;
         this.canvas.height = this.mode === 'radial'
             ? window.innerHeight
             : window.innerHeight * 0.45;
+        this._resizeAurora();
+    }
+
+    _resizeAurora() {
+        if (!this._auroraCanvas) return;
+        this._auroraCanvas.width  = window.innerWidth;
+        this._auroraCanvas.height = window.innerHeight;
     }
 
     nextMode() {
@@ -72,6 +90,14 @@ export class VisualizerRenderer {
         this.ctx.clearRect(0, 0, width, height);
 
         if (!audioData || !isPlaying) {
+            // Clear aurora canvas on idle
+            if (this._auroraCtx) {
+                this._auroraCtx.clearRect(
+                    0, 0,
+                    this._auroraCanvas.width,
+                    this._auroraCanvas.height
+                );
+            }
             this._drawIdle();
             return;
         }
@@ -136,7 +162,16 @@ export class VisualizerRenderer {
     // ─── Aurora background ─────────────────────────────────────
 
     _drawAurora(dataArray, bufferLength) {
-        const { width, height } = this.canvas;
+        // Use dedicated fullscreen canvas if available, else fall back to main canvas
+        const ctx    = this._auroraCtx    ?? this.ctx;
+        const canvas = this._auroraCanvas ?? this.canvas;
+        const width  = canvas.width  || window.innerWidth;
+        const height = canvas.height || window.innerHeight;
+
+        // Clear aurora canvas first
+        if (this._auroraCtx) {
+            ctx.clearRect(0, 0, width, height);
+        }
 
         // Average bass energy
         const bassLen = Math.floor(bufferLength * 0.08);
@@ -158,40 +193,40 @@ export class VisualizerRenderer {
 
         // Primary blob — bottom center, expands with bass
         const r1 = width * (0.55 + intensity * 0.2);
-        const g1 = this.ctx.createRadialGradient(
+        const g1 = ctx.createRadialGradient(
             width * 0.5, height * (1.05 - intensity * 0.25), 0,
             width * 0.5, height,
             r1
         );
-        g1.addColorStop(0,   `hsla(${h0},${s0}%,55%,${(alpha * 0.95).toFixed(3)})`);
-        g1.addColorStop(0.45,`hsla(${h0},${s0}%,45%,${(alpha * 0.35).toFixed(3)})`);
-        g1.addColorStop(1,   `hsla(${h0},${s0}%,35%,0)`);
-        this.ctx.fillStyle = g1;
-        this.ctx.fillRect(0, 0, width, height);
+        g1.addColorStop(0,    `hsla(${h0},${s0}%,55%,${(alpha * 0.95).toFixed(3)})`);
+        g1.addColorStop(0.45, `hsla(${h0},${s0}%,45%,${(alpha * 0.35).toFixed(3)})`);
+        g1.addColorStop(1,    `hsla(${h0},${s0}%,35%,0)`);
+        ctx.fillStyle = g1;
+        ctx.fillRect(0, 0, width, height);
 
         // Secondary blob — top-left, complementary hue
         const r2 = width * (0.38 + intensity * 0.12);
-        const g2 = this.ctx.createRadialGradient(
+        const g2 = ctx.createRadialGradient(
             width * 0.12, height * 0.18, 0,
             width * 0.12, height * 0.18,
             r2
         );
         g2.addColorStop(0, `hsla(${h1},${s1}%,50%,${(alpha * 0.55).toFixed(3)})`);
         g2.addColorStop(1, `hsla(${h1},${s1}%,40%,0)`);
-        this.ctx.fillStyle = g2;
-        this.ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = g2;
+        ctx.fillRect(0, 0, width, height);
 
         // Tertiary blob — right side, triadic hue
         const r3 = width * (0.28 + intensity * 0.1);
-        const g3 = this.ctx.createRadialGradient(
+        const g3 = ctx.createRadialGradient(
             width * 0.88, height * 0.55, 0,
             width * 0.88, height * 0.55,
             r3
         );
         g3.addColorStop(0, `hsla(${h2},70%,50%,${(alpha * 0.42).toFixed(3)})`);
         g3.addColorStop(1, `hsla(${h2},70%,40%,0)`);
-        this.ctx.fillStyle = g3;
-        this.ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = g3;
+        ctx.fillRect(0, 0, width, height);
     }
 
     // ─── Particles ─────────────────────────────────────────────
@@ -383,47 +418,50 @@ export class VisualizerRenderer {
         const cy = height / 2;
 
         const usefulLen = Math.floor(bufferLength * 0.6);
-        const innerR    = 108;
+        const innerR    = 100;
         const maxBarLen = Math.min(width, height) * 0.36;
         const angleStep = (Math.PI * 2) / usefulLen;
 
         this._radialAngle += 0.0015;
 
-        // Dark vignette behind cover art
-        const vigR = innerR - 4;
-        const vig  = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, vigR);
-        vig.addColorStop(0,    'rgba(0,0,0,0.82)');
-        vig.addColorStop(0.75, 'rgba(0,0,0,0.60)');
-        vig.addColorStop(1,    'rgba(0,0,0,0)');
-        this.ctx.fillStyle = vig;
-        this.ctx.beginPath();
-        this.ctx.arc(cx, cy, vigR, 0, Math.PI * 2);
-        this.ctx.fill();
+        const bassRaw = dataArray[0] / 255;
+        const midRaw  = dataArray[Math.floor(usefulLen * 0.3)] / 255;
+        const circleR = innerR * (0.92 + bassRaw * 0.12);
+        const { h: h0, s: s0 } = this.palette[0] ?? { h: 220, s: 80 };
+        const { h: h1, s: s1 } = this.palette[1] ?? { h: h0 + 40, s: s0 };
 
-        // Radial bars with log-scale mapping
+        // ── Flat 2D: draw bars centered on canvas, no perspective transform ──
+        this.ctx.save();
+        this.ctx.translate(cx, cy);
+
+        // ── Radial bars ──────────────────────────────────────────────────────
         for (let i = 0; i < usefulLen; i++) {
             const t      = i / usefulLen;
             const binIdx = Math.min(
                 Math.round(Math.pow(t, 1.6) * usefulLen),
                 usefulLen - 1
             );
-            const raw = dataArray[binIdx] / 255;
+            const raw   = dataArray[binIdx] / 255;
+            const angle = this._radialAngle + i * angleStep - Math.PI / 2;
+
             const len = Math.pow(raw, 0.85) * maxBarLen;
             if (len < 1) continue;
 
-            const angle = this._radialAngle + i * angleStep - Math.PI / 2;
-            const x1 = cx + Math.cos(angle) * innerR;
-            const y1 = cy + Math.sin(angle) * innerR;
-            const x2 = cx + Math.cos(angle) * (innerR + len);
-            const y2 = cy + Math.sin(angle) * (innerR + len);
+            const alpha = 0.45 + raw * 0.55;
+            const lineW = Math.max(1, 2 + raw * 4);
+
+            const x1 = Math.cos(angle) * innerR;
+            const y1 = Math.sin(angle) * innerR;
+            const x2 = Math.cos(angle) * (innerR + len);
+            const y2 = Math.sin(angle) * (innerR + len);
 
             const { h, s } = ColorExtractor.interpolate(this.palette, t);
             const glowHue  = (h - raw * 30 + 360) % 360;
 
-            this.ctx.shadowColor = `hsla(${glowHue},${s}%,70%,${0.35 + raw * 0.65})`;
+            this.ctx.shadowColor = `hsla(${glowHue},${s}%,70%,${(0.25 + raw * 0.55).toFixed(3)})`;
             this.ctx.shadowBlur  = 8 + raw * 28;
-            this.ctx.strokeStyle = `rgba(255,255,255,${0.45 + raw * 0.55})`;
-            this.ctx.lineWidth   = Math.max(1.5, 2 + raw * 4);
+            this.ctx.strokeStyle = `rgba(255,255,255,${alpha.toFixed(3)})`;
+            this.ctx.lineWidth   = lineW;
             this.ctx.lineCap     = 'round';
             this.ctx.beginPath();
             this.ctx.moveTo(x1, y1);
@@ -431,28 +469,34 @@ export class VisualizerRenderer {
             this.ctx.stroke();
         }
 
-        // Bass-pulsing border circles around cover art
-        const bassRaw = dataArray[0] / 255;
-        const midRaw  = dataArray[Math.floor(usefulLen * 0.3)] / 255;
-        const circleR = innerR * (0.92 + bassRaw * 0.12);
-        const { h: h0, s: s0 } = this.palette[0] ?? { h: 220, s: 80 };
-        const { h: h1, s: s1 } = this.palette[1] ?? { h: h0 + 40, s: s0 };
-
+        // ── Border circles ───────────────────────────────────────────────────
         this.ctx.shadowColor = `hsla(${h0},${s0}%,75%,${0.6 + bassRaw * 0.4})`;
         this.ctx.shadowBlur  = 18 + bassRaw * 40;
         this.ctx.strokeStyle = `hsla(${h1},${s1}%,80%,${0.3 + midRaw * 0.5})`;
         this.ctx.lineWidth   = 1 + bassRaw * 2;
         this.ctx.beginPath();
-        this.ctx.arc(cx, cy, circleR + 8, 0, Math.PI * 2);
+        this.ctx.arc(0, 0, circleR + 8, 0, Math.PI * 2);
         this.ctx.stroke();
 
         this.ctx.shadowBlur  = 6 + bassRaw * 20;
         this.ctx.strokeStyle = `rgba(255,255,255,${0.5 + bassRaw * 0.5})`;
         this.ctx.lineWidth   = 1.5 + bassRaw * 2;
         this.ctx.beginPath();
-        this.ctx.arc(cx, cy, circleR, 0, Math.PI * 2);
+        this.ctx.arc(0, 0, circleR, 0, Math.PI * 2);
         this.ctx.stroke();
         this.ctx.shadowBlur = 0;
+
+        this.ctx.restore();
+
+        // ── Vignette at centre (clean cover art backdrop) ────────────────────
+        const vig2 = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, innerR);
+        vig2.addColorStop(0,    'rgba(0,0,0,0.90)');
+        vig2.addColorStop(0.72, 'rgba(0,0,0,0.65)');
+        vig2.addColorStop(1,    'rgba(0,0,0,0)');
+        this.ctx.fillStyle = vig2;
+        this.ctx.beginPath();
+        this.ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
+        this.ctx.fill();
     }
 
     // ─── Shared drawing helper ─────────────────────────────────
