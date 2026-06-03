@@ -78,6 +78,12 @@ class App {
             lyricsProgress: document.getElementById('lyrics-progress'),
             lrcInput:       document.getElementById('lrc-input'),
             lrcBtn:         document.getElementById('lrc-btn'),
+            // Support modal
+            supportBtn:      document.getElementById('support-btn'),
+            supportModal:    document.getElementById('support-modal'),
+            supportCloseBtn: document.getElementById('support-close-btn'),
+            supportBackdrop: document.getElementById('support-backdrop'),
+            upiCopyBtn:      document.getElementById('upi-copy-btn'),
         };
 
         // Restore saved volume
@@ -88,6 +94,7 @@ class App {
         this._cursorTimeout = null;
         this._queueOpen = false;
         this._lastLyricsState = null;
+        this._supportOpen = false;
     }
 
     // ─── Events ────────────────────────────────────────────────
@@ -177,10 +184,22 @@ class App {
         });
         this.audioEl.addEventListener('timeupdate', () => this._onTimeUpdate());
 
+        // Support modal
+        this.el.supportBtn.addEventListener('click', () => this._openSupport());
+        this.el.supportCloseBtn.addEventListener('click', () => this._closeSupport());
+        this.el.supportBackdrop.addEventListener('click', () => this._closeSupport());
+        this.el.upiCopyBtn.addEventListener('click', () => this._copyUPI());
+
         // Keyboard shortcuts
         document.addEventListener('keydown', e => {
             if (e.target.tagName === 'INPUT') return;
             switch (e.code) {
+                case 'Escape':
+                    if (this._supportOpen) {
+                        this._closeSupport();
+                        e.preventDefault();
+                    }
+                    break;
                 case 'Space':       e.preventDefault(); this._togglePlay(); break;
                 case 'ArrowRight':  this.audioEl.duration && (this.audioEl.currentTime = Math.min(this.audioEl.currentTime + 5, this.audioEl.duration)); break;
                 case 'ArrowLeft':   this.audioEl.duration && (this.audioEl.currentTime = Math.max(this.audioEl.currentTime - 5, 0)); break;
@@ -199,11 +218,16 @@ class App {
         document.addEventListener('mousemove', () => {
             document.body.classList.remove('hide-cursor');
             this.el.controls.classList.remove('hidden');
+            this.el.fullscreenBtn.classList.remove('hidden');
+            this.el.supportBtn.classList.remove('hidden');
             clearTimeout(this._cursorTimeout);
             if (this.audioProcessor.isPlaying) {
                 this._cursorTimeout = setTimeout(() => {
+                    if (this._supportOpen) return;
                     document.body.classList.add('hide-cursor');
                     this.el.controls.classList.add('hidden');
+                    this.el.fullscreenBtn.classList.add('hidden');
+                    this.el.supportBtn.classList.add('hidden');
                 }, 3000);
             }
         });
@@ -513,6 +537,60 @@ class App {
             this.el.currentTime.textContent    = formatTime(t);
             this.el.totalTime.textContent      = formatTime(d);
             this.el.trackDuration.textContent  = `${formatTime(t)} / ${formatTime(d)}`;
+        }
+    }
+
+    // ─── Support Modal ─────────────────────────────────────────
+
+    _openSupport() {
+        this._supportOpen = true;
+        this.el.supportModal.classList.add('open');
+        
+        // Ensure cursor is shown and autohide is paused when modal is open
+        document.body.classList.remove('hide-cursor');
+        this.el.controls.classList.remove('hidden');
+        this.el.fullscreenBtn.classList.remove('hidden');
+        this.el.supportBtn.classList.remove('hidden');
+        clearTimeout(this._cursorTimeout);
+    }
+
+    _closeSupport() {
+        this._supportOpen = false;
+        this.el.supportModal.classList.remove('open');
+        
+        // Reset the copy button state if closed
+        const copyBtn = this.el.upiCopyBtn;
+        copyBtn.classList.remove('copied');
+        copyBtn.querySelector('#copy-btn-text').textContent = 'Copy';
+        copyBtn.querySelector('#copy-icon').style.display = '';
+        copyBtn.querySelector('#check-icon').style.display = 'none';
+    }
+
+    async _copyUPI() {
+        const upiId = 'ravishankar20066@okicici';
+        try {
+            await navigator.clipboard.writeText(upiId);
+            
+            // Visual feedback on button
+            const copyBtn = this.el.upiCopyBtn;
+            copyBtn.classList.add('copied');
+            copyBtn.querySelector('#copy-btn-text').textContent = 'Copied!';
+            copyBtn.querySelector('#copy-icon').style.display = 'none';
+            copyBtn.querySelector('#check-icon').style.display = '';
+            
+            this._notify('UPI ID copied to clipboard! 📋');
+
+            // Reset after 2.5 seconds
+            clearTimeout(this._copyTimer);
+            this._copyTimer = setTimeout(() => {
+                copyBtn.classList.remove('copied');
+                copyBtn.querySelector('#copy-btn-text').textContent = 'Copy';
+                copyBtn.querySelector('#copy-icon').style.display = '';
+                copyBtn.querySelector('#check-icon').style.display = 'none';
+            }, 2500);
+        } catch (err) {
+            console.error('Failed to copy UPI ID:', err);
+            this._notify('Failed to copy UPI ID ❌');
         }
     }
 

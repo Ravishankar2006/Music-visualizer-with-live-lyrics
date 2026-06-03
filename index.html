@@ -13,6 +13,14 @@
 <body>
   <div class="main-container">
 
+    <!-- Top-left: support button -->
+    <button class="support-btn" id="support-btn" title="Support the Creator" aria-label="Support the Creator">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+      </svg>
+      Support
+    </button>
+
     <!-- Fullscreen aurora canvas — drawn behind everything -->
     <canvas id="aurora-canvas" class="aurora-canvas"></canvas>
 
@@ -189,6 +197,52 @@
     </div><!-- /player-screen -->
 
     <audio id="audio" style="display:none"></audio>
+  </div>
+
+  <!-- ═══ SUPPORT MODAL ═══ -->
+  <div class="support-modal" id="support-modal" aria-label="Support Creator">
+    <div class="support-modal-backdrop" id="support-backdrop"></div>
+    <div class="support-card">
+      <button class="support-close-btn" id="support-close-btn" aria-label="Close support page">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+      </button>
+      
+      <div class="support-header">
+        <div class="support-icon-heart">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+        </div>
+        <h2 class="support-title">Support the Creator</h2>
+        <p class="support-subtitle">If you love this visualizer, consider supporting development!</p>
+      </div>
+
+      <div class="support-content">
+        <div class="qr-container">
+          <img src="qrpay.jpeg" alt="UPI QR Code" class="qr-image" />
+          <span class="qr-label">Scan QR to pay</span>
+        </div>
+
+        <div class="upi-container">
+          <span class="upi-label">UPI ID</span>
+          <div class="upi-box">
+            <span class="upi-id" id="upi-id-text">ravishankar20066@okicici</span>
+            <button class="upi-copy-btn" id="upi-copy-btn" title="Copy UPI ID">
+              <svg id="copy-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <svg id="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span id="copy-btn-text">Copy</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div id="toast" class="toast" aria-live="polite"></div>
