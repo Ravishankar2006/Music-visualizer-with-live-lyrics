@@ -90,6 +90,8 @@ class App {
             feedbackCloseBtn: document.getElementById('feedback-close-btn'),
             feedbackBackdrop: document.getElementById('feedback-backdrop'),
             feedbackForm:     document.getElementById('feedback-form'),
+            // Download guide link
+            downloadGuideBtn: document.getElementById('download-guide-btn'),
         };
 
         // Restore saved volume
@@ -243,6 +245,7 @@ class App {
             this.el.fullscreenBtn.classList.remove('hidden');
             this.el.supportBtn.classList.remove('hidden');
             this.el.feedbackBtn.classList.remove('hidden');
+            this.el.downloadGuideBtn.classList.remove('hidden');
             clearTimeout(this._cursorTimeout);
             if (this.audioProcessor.isPlaying) {
                 this._cursorTimeout = setTimeout(() => {
@@ -252,6 +255,7 @@ class App {
                     this.el.fullscreenBtn.classList.add('hidden');
                     this.el.supportBtn.classList.add('hidden');
                     this.el.feedbackBtn.classList.add('hidden');
+                    this.el.downloadGuideBtn.classList.add('hidden');
                 }, 3000);
             }
         });
