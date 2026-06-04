@@ -84,6 +84,12 @@ class App {
             supportCloseBtn: document.getElementById('support-close-btn'),
             supportBackdrop: document.getElementById('support-backdrop'),
             upiCopyBtn:      document.getElementById('upi-copy-btn'),
+            // Feedback modal
+            feedbackBtn:      document.getElementById('feedback-btn'),
+            feedbackModal:    document.getElementById('feedback-modal'),
+            feedbackCloseBtn: document.getElementById('feedback-close-btn'),
+            feedbackBackdrop: document.getElementById('feedback-backdrop'),
+            feedbackForm:     document.getElementById('feedback-form'),
         };
 
         // Restore saved volume
@@ -95,6 +101,7 @@ class App {
         this._queueOpen = false;
         this._lastLyricsState = null;
         this._supportOpen = false;
+        this._feedbackOpen = false;
     }
 
     // ─── Events ────────────────────────────────────────────────
@@ -190,13 +197,22 @@ class App {
         this.el.supportBackdrop.addEventListener('click', () => this._closeSupport());
         this.el.upiCopyBtn.addEventListener('click', () => this._copyUPI());
 
+        // Feedback modal
+        this.el.feedbackBtn.addEventListener('click', () => this._openFeedback());
+        this.el.feedbackCloseBtn.addEventListener('click', () => this._closeFeedback());
+        this.el.feedbackBackdrop.addEventListener('click', () => this._closeFeedback());
+        this.el.feedbackForm.addEventListener('submit', e => this._submitFeedback(e));
+
         // Keyboard shortcuts
         document.addEventListener('keydown', e => {
-            if (e.target.tagName === 'INPUT') return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
             switch (e.code) {
                 case 'Escape':
                     if (this._supportOpen) {
                         this._closeSupport();
+                        e.preventDefault();
+                    } else if (this._feedbackOpen) {
+                        this._closeFeedback();
                         e.preventDefault();
                     }
                     break;
@@ -220,14 +236,16 @@ class App {
             this.el.controls.classList.remove('hidden');
             this.el.fullscreenBtn.classList.remove('hidden');
             this.el.supportBtn.classList.remove('hidden');
+            this.el.feedbackBtn.classList.remove('hidden');
             clearTimeout(this._cursorTimeout);
             if (this.audioProcessor.isPlaying) {
                 this._cursorTimeout = setTimeout(() => {
-                    if (this._supportOpen) return;
+                    if (this._supportOpen || this._feedbackOpen) return;
                     document.body.classList.add('hide-cursor');
                     this.el.controls.classList.add('hidden');
                     this.el.fullscreenBtn.classList.add('hidden');
                     this.el.supportBtn.classList.add('hidden');
+                    this.el.feedbackBtn.classList.add('hidden');
                 }, 3000);
             }
         });
@@ -591,6 +609,75 @@ class App {
         } catch (err) {
             console.error('Failed to copy UPI ID:', err);
             this._notify('Failed to copy UPI ID ❌');
+        }
+    }
+
+    // ─── Feedback Modal ────────────────────────────────────────
+
+    _openFeedback() {
+        this._feedbackOpen = true;
+        this.el.feedbackModal.classList.add('open');
+        
+        // Ensure cursor is shown and autohide is paused when modal is open
+        document.body.classList.remove('hide-cursor');
+        this.el.controls.classList.remove('hidden');
+        this.el.fullscreenBtn.classList.remove('hidden');
+        this.el.supportBtn.classList.remove('hidden');
+        this.el.feedbackBtn.classList.remove('hidden');
+        clearTimeout(this._cursorTimeout);
+    }
+
+    _closeFeedback() {
+        this._feedbackOpen = false;
+        this.el.feedbackModal.classList.remove('open');
+    }
+
+    async _submitFeedback(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('feedback-submit-btn');
+        const submitText = document.getElementById('feedback-submit-text');
+        const spinner = document.getElementById('feedback-spinner');
+        
+        const name = document.getElementById('feedback-name').value;
+        const email = document.getElementById('feedback-email').value;
+        const message = document.getElementById('feedback-message').value;
+        
+        submitBtn.disabled = true;
+        submitText.textContent = 'Sending...';
+        spinner.style.display = 'block';
+        
+        try {
+            const response = await fetch("https://formsubmit.co/ajax/efc6c81298b5fdaff1cde227fa33318e", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Accept": "application/json"
+                },
+                body: JSON.stringify({
+                    name: name,
+                    email: email,
+                    message: message,
+                    _subject: "New Music Visualizer Feedback"
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                this._notify("Feedback sent successfully! ✉️");
+                this._closeFeedback();
+                this.el.feedbackForm.reset();
+            } else {
+                throw new Error(result.message || "Failed to send feedback");
+            }
+        } catch (err) {
+            console.error("Feedback error:", err);
+            this._notify("Error sending feedback. Try again! ❌");
+        } finally {
+            submitBtn.disabled = false;
+            submitText.textContent = 'Send Feedback';
+            spinner.style.display = 'none';
         }
     }
 

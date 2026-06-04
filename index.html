@@ -28,6 +28,14 @@
       Support
     </button>
 
+    <!-- Top-left: feedback button -->
+    <button class="feedback-btn" id="feedback-btn" title="Send Feedback" aria-label="Send Feedback">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      Feedback
+    </button>
+
     <!-- Fullscreen aurora canvas — drawn behind everything -->
     <canvas id="aurora-canvas" class="aurora-canvas"></canvas>
 
@@ -252,8 +260,62 @@
     </div>
   </div>
 
+  <!-- ═══ FEEDBACK MODAL ═══ -->
+  <div class="support-modal" id="feedback-modal" aria-label="Send Feedback">
+    <div class="support-modal-backdrop" id="feedback-backdrop"></div>
+    <div class="support-card">
+      <button class="support-close-btn" id="feedback-close-btn" aria-label="Close feedback page">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+        </svg>
+      </button>
+      
+      <div class="support-header">
+        <div class="support-icon-heart" style="background: rgba(0, 184, 212, 0.1); border-color: rgba(0, 184, 212, 0.2); color: #00b8d4; animation: none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 24px; height: 24px;">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </div>
+        <h2 class="support-title">Send Feedback</h2>
+        <p class="support-subtitle">Have a suggestion or found a bug? Let us know!</p>
+      </div>
+
+      <form class="feedback-form" id="feedback-form">
+        <div class="feedback-field">
+          <input type="text" id="feedback-name" name="name" placeholder="Your Name" required class="feedback-input">
+        </div>
+        <div class="feedback-field">
+          <input type="email" id="feedback-email" name="email" placeholder="Your Email" required class="feedback-input">
+        </div>
+        <div class="feedback-field">
+          <textarea id="feedback-message" name="message" placeholder="Type your message here..." required class="feedback-input feedback-textarea" rows="4"></textarea>
+        </div>
+        <button type="submit" class="feedback-submit-btn" id="feedback-submit-btn">
+          <span id="feedback-submit-text">Send Feedback</span>
+          <div class="feedback-spinner" id="feedback-spinner" style="display: none;"></div>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ PORTRAIT LOCK OVERLAY ═══ -->
+  <div class="portrait-lock-overlay" id="portrait-lock-overlay">
+    <div class="portrait-lock-card">
+      <div class="rotate-device-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40">
+          <rect x="5" y="2" width="14" height="20" rx="3" stroke-linecap="round" stroke-linejoin="round"></rect>
+          <path d="M12 18h.01" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+          <path d="M17 9A5 5 0 0 0 7 9" stroke-linecap="round" stroke-linejoin="round"></path>
+          <polyline points="7 5 7 9 11 9"></polyline>
+        </svg>
+      </div>
+      <h2 class="lock-title">Please Rotate Your Screen</h2>
+      <p class="lock-text">Please turn your screen to <strong>landscape</strong> mode to experience the music visualizer.</p>
+    </div>
+  </div>
+
   <div id="toast" class="toast" aria-live="polite"></div>
 
-  <script type="module" src="./js/app.js"></script>
+  <script type="module" src="./js/app.js?v=2"></script>
 </body>
 </html>

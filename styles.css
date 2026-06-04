@@ -795,11 +795,10 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
    SUPPORT MODAL & BUTTON
    ══════════════════════════════════════════════════════════ */
 
-/* Support button at top-left */
-.support-btn {
+/* Support button & Feedback button at top-left */
+.support-btn, .feedback-btn {
     position: absolute;
     top: 1.25rem;
-    left: 1.25rem;
     z-index: 40;
     padding: 0.55rem 1.1rem;
     border-radius: var(--radius-pill);
@@ -817,21 +816,27 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
     letter-spacing: 0.02em;
     transition: opacity var(--trans-smooth), transform var(--trans-smooth), color var(--trans-smooth), background var(--trans-smooth), box-shadow var(--trans-smooth);
 }
-.support-btn svg {
+.support-btn {
+    left: 1.25rem;
+}
+.feedback-btn {
+    left: 8.5rem;
+}
+.support-btn svg, .feedback-btn svg {
     width: 14px;
     height: 14px;
     transition: transform 0.25s ease;
 }
-.support-btn:hover {
+.support-btn:hover, .feedback-btn:hover {
     color: var(--white-hi);
     background: rgba(255, 255, 255, 0.12);
     transform: translateY(-1px) scale(1.03);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
-.support-btn:hover svg {
+.support-btn:hover svg, .feedback-btn:hover svg {
     transform: scale(1.15);
 }
-.support-btn.hidden {
+.support-btn.hidden, .feedback-btn.hidden {
     opacity: 0;
     transform: translateY(-16px);
     pointer-events: none;
@@ -1064,4 +1069,174 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
     background: #00c853;
     border-color: #00c853;
     color: #fff;
+}
+
+/* ── Portrait Lock Overlay ────────────────────────────────── */
+.portrait-lock-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    background: radial-gradient(circle at center, rgba(16, 16, 32, 0.98) 0%, rgba(8, 8, 16, 1) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: #fff;
+}
+
+@media (orientation: portrait) {
+    .portrait-lock-overlay {
+        display: flex;
+        animation: fadeIn 0.4s ease forwards;
+    }
+}
+
+.portrait-lock-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1.5rem;
+    max-width: 320px;
+    padding: 2.5rem 2rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.7);
+}
+
+.rotate-device-icon {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.85);
+    margin-bottom: 0.5rem;
+}
+
+.rotate-device-icon svg {
+    animation: rotateDevice 2.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+}
+
+@keyframes rotateDevice {
+    0% {
+        transform: rotate(0deg);
+    }
+    40%, 60% {
+        transform: rotate(-90deg);
+    }
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+.lock-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.02em;
+    margin: 0;
+}
+
+.lock-text {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1.5;
+    margin: 0;
+}
+
+.lock-text strong {
+    color: #fff;
+    font-weight: 600;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ── Feedback Form styling ────────────────────────────────── */
+.feedback-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    width: 100%;
+}
+
+.feedback-field {
+    width: 100%;
+}
+
+.feedback-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 0.8rem 1rem;
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: #fff;
+    outline: none;
+    transition: border-color var(--trans-smooth), background var(--trans-smooth), box-shadow var(--trans-smooth);
+}
+
+.feedback-input::placeholder {
+    color: var(--white-lo);
+}
+
+.feedback-input:focus {
+    border-color: rgba(0, 184, 212, 0.5);
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 0 12px rgba(0, 184, 212, 0.15);
+}
+
+.feedback-textarea {
+    resize: none;
+}
+
+.feedback-submit-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    background: #00b8d4;
+    border: none;
+    color: #000;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.85rem;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background var(--trans-smooth), transform 0.1s ease, box-shadow var(--trans-smooth);
+}
+
+.feedback-submit-btn:hover {
+    background: #00e5ff;
+    box-shadow: 0 0 20px rgba(0, 184, 212, 0.4);
+    transform: translateY(-1px);
+}
+
+.feedback-submit-btn:active {
+    transform: translateY(1px);
+}
+
+.feedback-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(0, 0, 0, 0.15);
+    border-top: 2px solid #000;
+    border-radius: 50%;
+    animation: feedbackSpin 0.8s linear infinite;
+}
+
+@keyframes feedbackSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
