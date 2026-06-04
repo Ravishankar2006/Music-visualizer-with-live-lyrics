@@ -851,46 +851,6 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
 .feedback-btn {
     left: 8.5rem;
 }
-.download-guide-btn {
-    left: 16.2rem;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.55rem 1.1rem;
-    border-radius: var(--radius-pill);
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
-    color: var(--white-mid);
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    position: absolute;
-    top: 1.25rem;
-    z-index: 40;
-    transition: opacity var(--trans-smooth), transform var(--trans-smooth), color var(--trans-smooth), background var(--trans-smooth), box-shadow var(--trans-smooth);
-}
-.download-guide-btn svg {
-    width: 14px;
-    height: 14px;
-    transition: transform 0.25s ease;
-}
-.download-guide-btn:hover {
-    color: var(--white-hi);
-    background: rgba(255, 255, 255, 0.12);
-    transform: translateY(-1px) scale(1.03);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-}
-.download-guide-btn:hover svg {
-    transform: translateY(1px) scale(1.15);
-}
-.download-guide-btn.hidden {
-    opacity: 0;
-    transform: translateY(-16px);
-    pointer-events: none;
-}
 .support-btn svg, .feedback-btn svg {
     width: 14px;
     height: 14px;
