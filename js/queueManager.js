@@ -11,9 +11,14 @@ export class QueueManager {
 
     addFiles(files) {
         const audioFiles = [];
+        const supportedExtensions = ['.mp3', '.flac', '.wav', '.ogg', '.m4a', '.mp4'];
 
         for (let file of files) {
-            if (file.type.startsWith('audio/')) {
+            const hasAudioMime = file.type && file.type.startsWith('audio/');
+            const fileNameLower = file.name.toLowerCase();
+            const hasAudioExt = supportedExtensions.some(ext => fileNameLower.endsWith(ext));
+
+            if (hasAudioMime || hasAudioExt) {
                 audioFiles.push(file);
             }
         }

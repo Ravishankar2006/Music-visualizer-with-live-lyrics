@@ -108,12 +108,18 @@ class App {
 
     _setupEvents() {
         // File inputs
-        this.el.audioInput.addEventListener('change', e => this._handleFiles(e.target.files));
-        this.el.audioInputMore.addEventListener('change', e => this._handleFiles(e.target.files));
+        this.el.audioInput.addEventListener('change', e => {
+            this._handleFiles(e.target.files);
+            e.target.value = ''; // Reset value to allow re-selecting same file
+        });
+        this.el.audioInputMore.addEventListener('change', e => {
+            this._handleFiles(e.target.files);
+            e.target.value = ''; // Reset value to allow re-selecting same file
+        });
 
         // Clicking the card forwards to the file input
         this.el.uploadArea.addEventListener('click', e => {
-            if (e.target === this.el.audioInput) return;
+            if (e.target === this.el.audioInput || e.target.closest('#upload-btn-label')) return;
             this.el.audioInput.click();
         });
 
