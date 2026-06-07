@@ -119,7 +119,7 @@ class App {
 
         // Clicking the card forwards to the file input
         this.el.uploadArea.addEventListener('click', e => {
-            if (e.target === this.el.audioInput || e.target.closest('#upload-btn-label')) return;
+            if (e.target === this.el.audioInput || e.target.closest('#upload-btn-label') || e.target.closest('#upload-dl-link')) return;
             this.el.audioInput.click();
         });
 

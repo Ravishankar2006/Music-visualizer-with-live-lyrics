@@ -32,6 +32,7 @@
       --trans-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
       --apple-color:  #fc3c44;
       --spotify-color: #1db954;
+      --youtube-color: #ff0000;
     }
 
     /* ── Base ─────────────────────────────────────────────────── */
@@ -227,6 +228,18 @@
     }
     .converter-card--spotify:hover::before { opacity: 1; }
 
+    /* YouTube card accent */
+    .converter-card--youtube {
+      border-color: rgba(255, 0, 0, 0.2);
+    }
+    .converter-card--youtube::before {
+      background: radial-gradient(ellipse at top left, rgba(255, 0, 0, 0.08) 0%, transparent 70%);
+    }
+    .converter-card--youtube:hover {
+      border-color: rgba(255, 0, 0, 0.38);
+    }
+    .converter-card--youtube:hover::before { opacity: 1; }
+
     /* Card header row */
     .card-header {
       display: flex;
@@ -246,6 +259,9 @@
     }
     .card-logo--spotify {
       background: linear-gradient(135deg, #2eeb7a 0%, #1db954 100%);
+    }
+    .card-logo--youtube {
+      background: linear-gradient(135deg, #ff4b4b 0%, #ff0000 100%);
     }
     .card-title-group { flex: 1; min-width: 0; }
     .card-title {
@@ -268,6 +284,7 @@
     }
     .card-badge--apple  { background: rgba(252, 60, 68, 0.15); color: #ff6b6b; border: 1px solid rgba(252, 60, 68, 0.25); }
     .card-badge--spotify{ background: rgba(29, 185, 84, 0.15);  color: #2eeb7a; border: 1px solid rgba(29, 185, 84, 0.25); }
+    .card-badge--youtube{ background: rgba(255, 0, 0, 0.15);  color: #ff4b4b; border: 1px solid rgba(255, 0, 0, 0.25); }
 
     /* Description */
     .card-desc {
@@ -298,6 +315,7 @@
     }
     .step-num--apple   { background: rgba(252, 60, 68, 0.18); color: #ff6b6b; border: 1px solid rgba(252, 60, 68, 0.3); }
     .step-num--spotify { background: rgba(29, 185, 84, 0.18);  color: #2eeb7a; border: 1px solid rgba(29, 185, 84, 0.3); }
+    .step-num--youtube { background: rgba(255, 0, 0, 0.18);  color: #ff4b4b; border: 1px solid rgba(255, 0, 0, 0.3); }
     .step-text {
       font-size: 0.82rem;
       color: var(--white-mid);
@@ -346,6 +364,13 @@
       box-shadow: 0 6px 28px rgba(29, 185, 84, 0.4);
     }
     .card-cta--spotify:hover { box-shadow: 0 10px 36px rgba(29, 185, 84, 0.55); }
+
+    .card-cta--youtube {
+      background: linear-gradient(135deg, #ff4b4b, #ff0000);
+      color: #fff;
+      box-shadow: 0 6px 28px rgba(255, 0, 0, 0.4);
+    }
+    .card-cta--youtube:hover { box-shadow: 0 10px 36px rgba(255, 0, 0, 0.55); }
 
     .card-cta svg { width: 15px; height: 15px; }
 
@@ -493,7 +518,7 @@
             <h2 class="card-title">Apple Music</h2>
             <span class="card-badge card-badge--apple">
               <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
-              aaplmusicdownloader.com
+              aplmate.com
             </span>
           </div>
         </div>
@@ -515,7 +540,7 @@
           </div>
           <div class="step">
             <span class="step-num step-num--apple">3</span>
-            <p class="step-text">Paste the link into <strong>aaplmusicdownloader.com</strong> and hit Download.</p>
+            <p class="step-text">Paste the link into <strong>aplmate.com</strong> and hit Download.</p>
           </div>
           <div class="step">
             <span class="step-num step-num--apple">4</span>
@@ -523,7 +548,7 @@
           </div>
         </div>
 
-        <a href="https://aaplmusicdownloader.com" target="_blank" rel="noopener noreferrer"
+        <a href="https://aplmate.com" target="_blank" rel="noopener noreferrer"
            class="card-cta card-cta--apple" id="apple-cta-btn" aria-label="Open Apple Music to MP3 converter">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
@@ -542,7 +567,7 @@
             <h2 class="card-title">Spotify</h2>
             <span class="card-badge card-badge--spotify">
               <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
-              spotidownloader.com
+              spotisaver.net
             </span>
           </div>
         </div>
@@ -564,7 +589,7 @@
           </div>
           <div class="step">
             <span class="step-num step-num--spotify">3</span>
-            <p class="step-text">Head to <strong>spotidownloader.com</strong>, paste the link and click Download.</p>
+            <p class="step-text">Head to <strong>spotisaver.net</strong>, paste the link and click Download.</p>
           </div>
           <div class="step">
             <span class="step-num step-num--spotify">4</span>
@@ -572,7 +597,7 @@
           </div>
         </div>
 
-        <a href="https://spotidownloader.com/en19" target="_blank" rel="noopener noreferrer"
+        <a href="https://spotisaver.net/en1" target="_blank" rel="noopener noreferrer"
            class="card-cta card-cta--spotify" id="spotify-cta-btn" aria-label="Open Spotify to MP3 converter">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
@@ -580,6 +605,54 @@
             <line x1="10" y1="14" x2="21" y2="3"/>
           </svg>
           Open SpotiDownloader
+        </a>
+      </article>
+
+      <!-- YouTube card -->
+      <article class="converter-card converter-card--youtube" id="youtube-card">
+        <div class="card-header">
+          <div class="card-logo card-logo--youtube" aria-hidden="true">▶️</div>
+          <div class="card-title-group">
+            <h2 class="card-title">YouTube</h2>
+            <span class="card-badge card-badge--youtube">
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>
+              yt2mp3.ai
+            </span>
+          </div>
+        </div>
+
+        <p class="card-desc">
+          <strong style="color: var(--white-hi)">YouTube to MP3 Converter</strong> lets you paste any YouTube
+          video URL and download the audio as an MP3. It's fast, easy, and supports high-quality downloads.
+        </p>
+
+        <div class="card-steps" aria-label="Steps to download from YouTube">
+          <div class="step">
+            <span class="step-num step-num--youtube">1</span>
+            <p class="step-text">Open <strong>YouTube</strong> and find the video you want to convert.</p>
+          </div>
+          <div class="step">
+            <span class="step-num step-num--youtube">2</span>
+            <p class="step-text">Click <strong>Share → Copy Link</strong> to get the video URL.</p>
+          </div>
+          <div class="step">
+            <span class="step-num step-num--youtube">3</span>
+            <p class="step-text">Paste the link into <strong>yt2mp3.ai</strong> and hit Convert/Download.</p>
+          </div>
+          <div class="step">
+            <span class="step-num step-num--youtube">4</span>
+            <p class="step-text">Save the MP3 file, and <strong>drag &amp; drop it</strong> into the visualizer!</p>
+          </div>
+        </div>
+
+        <a href="https://yt2mp3.ai/" target="_blank" rel="noopener noreferrer"
+           class="card-cta card-cta--youtube" id="youtube-cta-btn" aria-label="Open YouTube to MP3 converter">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+          Open YT2MP3
         </a>
       </article>
 
