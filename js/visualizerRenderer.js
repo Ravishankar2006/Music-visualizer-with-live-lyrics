@@ -51,10 +51,25 @@ export class VisualizerRenderer {
     }
 
     resize() {
-        this.canvas.width  = window.innerWidth;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
+        this.canvas.width  = width;
         this.canvas.height = this.mode === 'radial'
-            ? window.innerHeight
-            : window.innerHeight * 0.45;
+            ? height
+            : height * 0.45;
+
+        // Calculate responsive radial sizes
+        const minDim = Math.min(width, height);
+        const isNarrow = width < 600;
+        const maxOuterR = isNarrow ? (width / 2) - 24 : minDim * 0.45;
+        this.innerR = Math.max(45, maxOuterR * 0.45);
+        this.maxBarLen = maxOuterR - this.innerR;
+
+        // Update cover art size CSS variable to fit nicely in inner circle
+        const coverSize = Math.round(this.innerR * 2 - 16);
+        document.documentElement.style.setProperty('--radial-cover-size', `${coverSize}px`);
+
         this._resizeAurora();
     }
 
@@ -311,8 +326,9 @@ export class VisualizerRenderer {
         const { width, height } = this.canvas;
         // Only use lower 50% of FFT bins (audible range)
         const usefulLen = Math.floor(bufferLength * 0.5);
-        const gap       = 2;
-        const N         = 80;                    // bars per side → 160 total
+        const isNarrow  = width < 600;
+        const gap       = isNarrow ? 1.5 : 2;
+        const N         = isNarrow ? 40 : 80;                    // bars per side → 80 or 160 total
         const bw        = (width - gap * (N * 2 - 1)) / (N * 2);
         const centerY   = height / 2;
         const maxHalf   = height * 0.47;
@@ -418,8 +434,8 @@ export class VisualizerRenderer {
         const cy = height / 2;
 
         const usefulLen = Math.floor(bufferLength * 0.6);
-        const innerR    = 100;
-        const maxBarLen = Math.min(width, height) * 0.36;
+        const innerR    = this.innerR || 100;
+        const maxBarLen = this.maxBarLen || (Math.min(width, height) * 0.36);
         const angleStep = (Math.PI * 2) / usefulLen;
 
         this._radialAngle += 0.0015;
@@ -448,7 +464,8 @@ export class VisualizerRenderer {
             if (len < 1) continue;
 
             const alpha = 0.45 + raw * 0.55;
-            const lineW = Math.max(1, 2 + raw * 4);
+            const isNarrow = width < 600;
+            const lineW = Math.max(0.8, (isNarrow ? 1.2 : 2) + raw * (isNarrow ? 2.5 : 4));
 
             const x1 = Math.cos(angle) * innerR;
             const y1 = Math.sin(angle) * innerR;
